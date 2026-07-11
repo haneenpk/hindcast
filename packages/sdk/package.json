@@ -24,7 +24,9 @@
     "rrweb": "^2.1.0"
   },
   "devDependencies": {
+    "happy-dom": "^20.10.6",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   }
 }
