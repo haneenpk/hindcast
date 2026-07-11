@@ -4,6 +4,7 @@
   "description": "Self-hosted session replay. Watch what a real user did before the error, with masking applied in their browser before anything is sent.",
   "scripts": {
     "build": "pnpm -r build",
+    "test": "pnpm -r test",
     "db:generate": "pnpm --filter @hindcast/db generate",
     "db:migrate": "pnpm --filter @hindcast/db migrate:dev",
     "db:studio": "pnpm --filter @hindcast/db studio"

@@ -35,7 +35,8 @@ Sessions never leave your infrastructure.
     apps/web         dashboard + replay player
     apps/demo        small storefront with planted bugs, the demo stage
 
-Only `packages/db` exists so far; the rest lands roughly in that order.
+The recorder and the metadata store exist so far; the rest lands roughly
+in that order.
 
 ## Running locally
 
@@ -54,5 +55,7 @@ If the default ports clash with services you already run, copy
 
 ## Status
 
-Early. Local infrastructure and the data model are in place; the
-recorder SDK is next.
+Early. Infrastructure, the data model and a first cut of the recorder
+are in. The recorder buffers rrweb events in memory, ships a batch every
+five seconds, and gets one last `sendBeacon` out as the tab goes away.
+The ingest API that receives those batches is next.
