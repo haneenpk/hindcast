@@ -35,8 +35,8 @@ Sessions never leave your infrastructure.
     apps/web         dashboard + replay player
     apps/demo        small storefront with planted bugs, the demo stage
 
-The recorder and the metadata store exist so far; the rest lands roughly
-in that order.
+The recorder, the shared wire schema, the ingest API and the metadata
+store exist so far; the dashboard and demo shop are still to come.
 
 ## Running locally
 
@@ -53,9 +53,17 @@ pnpm db:migrate
 If the default ports clash with services you already run, copy
 `.env.example` to `.env` and move them.
 
+To take batches from a recorder, run the ingest API:
+
+```sh
+cp apps/ingest/.env.example apps/ingest/.env
+pnpm --filter @hindcast/ingest start:dev    # listens on :4100
+```
+
 ## Status
 
-Early. Infrastructure, the data model and a first cut of the recorder
-are in. The recorder buffers rrweb events in memory, ships a batch every
-five seconds, and gets one last `sendBeacon` out as the tab goes away.
-The ingest API that receives those batches is next.
+Early, but the pipeline is closed: the recorder batches rrweb events and
+ships them every five seconds (plus one last `sendBeacon` as the tab
+dies), and the ingest API authenticates the project key, gzips each
+chunk into object storage, and indexes the session in Postgres. Next up:
+the dashboard where sessions get watched.
