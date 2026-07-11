@@ -2,6 +2,12 @@
   "name": "hindcast",
   "private": true,
   "description": "Self-hosted session replay. Watch what a real user did before the error, with masking applied in their browser before anything is sent.",
+  "scripts": {
+    "build": "pnpm -r build",
+    "db:generate": "pnpm --filter @hindcast/db generate",
+    "db:migrate": "pnpm --filter @hindcast/db migrate:dev",
+    "db:studio": "pnpm --filter @hindcast/db studio"
+  },
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=20"
