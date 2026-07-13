@@ -11,11 +11,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1085.0",
     "@hindcast/db": "workspace:*",
+    "@rrweb/replay": "^2.1.0",
     "geist": "^1.7.2",
     "next": "^15.5.20",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "rrweb-player": "^2.1.0",
     "ua-parser-js": "^1.0.41",
     "zod": "^4.4.3"
   },
