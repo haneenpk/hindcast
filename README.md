@@ -77,5 +77,5 @@ rrweb events and ships them every five seconds (plus one last
 `sendBeacon` as the tab dies); ingest authenticates the project key,
 gzips each chunk into object storage, and indexes the session in
 Postgres; the dashboard manages projects, hands out install snippets,
-and lists recorded sessions with duration, pages and device. Next: the
-player.
+lists recorded sessions, and plays them back — click a session and
+watch it. Errors, network requests and the synced timeline are next.
