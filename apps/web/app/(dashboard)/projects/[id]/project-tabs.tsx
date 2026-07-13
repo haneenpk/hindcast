@@ -14,7 +14,9 @@ export function ProjectTabs({ projectId }: { projectId: string }) {
   return (
     <nav className="mb-6 flex gap-1 border-b border-edge">
       {tabs.map((tab) => {
-        const active = pathname === tab.href;
+        const active =
+          pathname === tab.href ||
+          (tab.href === base && pathname.startsWith(`${base}/sessions`));
         return (
           <Link
             key={tab.href}

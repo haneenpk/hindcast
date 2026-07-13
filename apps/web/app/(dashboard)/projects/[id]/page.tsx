@@ -70,32 +70,34 @@ export default async function ProjectSessionsPage({ params }: Props) {
       </div>
       <ul className="divide-y divide-edge">
         {sessions.map((session) => (
-          <li
-            key={session.id}
-            className="grid grid-cols-[minmax(0,1fr)_150px_60px_70px_80px] items-center gap-3 px-4 py-2.5"
-          >
-            <span className="min-w-0">
-              <span className="block truncate text-[13px]">
-                {entryPath(session.entryUrl)}
+          <li key={session.id}>
+            <Link
+              href={`/projects/${project.id}/sessions/${session.id}`}
+              className="grid grid-cols-[minmax(0,1fr)_150px_60px_70px_80px] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised/50"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[13px]">
+                  {entryPath(session.entryUrl)}
+                </span>
+                <span className="text-faint block font-mono text-[11px]">
+                  {session.id.slice(0, 8)}
+                </span>
               </span>
-              <span className="text-faint block font-mono text-[11px]">
-                {session.id.slice(0, 8)}
+              <span className="text-muted truncate text-[13px]">
+                {describeDevice(session.userAgent)}
               </span>
-            </span>
-            <span className="text-muted truncate text-[13px]">
-              {describeDevice(session.userAgent)}
-            </span>
-            <span className="text-muted text-right text-[13px] tabular-nums">
-              {pageCounts.get(session.id) ?? 1}
-            </span>
-            <span className="text-right font-mono text-xs tabular-nums">
-              {formatDuration(
-                session.lastEventAt.getTime() - session.startedAt.getTime(),
-              )}
-            </span>
-            <span className="text-faint text-right text-[13px]">
-              {formatRelative(session.startedAt)}
-            </span>
+              <span className="text-muted text-right text-[13px] tabular-nums">
+                {pageCounts.get(session.id) ?? 1}
+              </span>
+              <span className="text-right font-mono text-xs tabular-nums">
+                {formatDuration(
+                  session.lastEventAt.getTime() - session.startedAt.getTime(),
+                )}
+              </span>
+              <span className="text-faint text-right text-[13px]">
+                {formatRelative(session.startedAt)}
+              </span>
+            </Link>
           </li>
         ))}
       </ul>
