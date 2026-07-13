@@ -11,6 +11,9 @@ interface RrwebPlayerInstance {
 }
 
 export function SessionPlayer({ sessionId }: { sessionId: string }) {
+  // Width comes from the wrapper, which is never display:none — measuring
+  // the (hidden-while-loading) mount div hands the player a width of 0.
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<RrwebPlayerInstance | null>(null);
   const [state, setState] = useState<PlayerState>("loading");
@@ -35,7 +38,7 @@ export function SessionPlayer({ sessionId }: { sessionId: string }) {
 
         const { default: Player } = await import("rrweb-player");
         if (cancelled || !containerRef.current) return;
-        const width = containerRef.current.clientWidth;
+        const width = wrapperRef.current?.clientWidth || 848;
         playerRef.current = new Player({
           target: containerRef.current,
           props: {
@@ -67,7 +70,7 @@ export function SessionPlayer({ sessionId }: { sessionId: string }) {
   }, [sessionId]);
 
   return (
-    <div>
+    <div ref={wrapperRef}>
       {state === "loading" ? (
         <div className="flex aspect-video items-center justify-center rounded-lg border border-edge bg-surface">
           <span className="text-faint text-[13px]">Loading session…</span>
