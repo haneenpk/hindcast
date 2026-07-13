@@ -72,6 +72,7 @@ export class EventsService {
           storageKey,
           sizeBytes,
           eventCount: batch.events.length,
+          pageUrl: batch.url.slice(0, 2048),
           firstEventAt,
           lastEventAt,
         },

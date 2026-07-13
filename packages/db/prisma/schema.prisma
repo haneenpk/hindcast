@@ -45,6 +45,9 @@ model EventChunk {
   storageKey   String
   sizeBytes    Int
   eventCount   Int
+  // Where the tab was when this batch flushed — powers the pages count
+  // and, later, filtering sessions by page.
+  pageUrl      String?
   firstEventAt DateTime
   lastEventAt  DateTime
   createdAt    DateTime @default(now())
