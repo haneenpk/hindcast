@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/*
+ * The entire palette lives here. Near-monochrome dark; color carries
+ * meaning only: red = error, green = healthy, amber = marker/attention.
+ * The default Tailwind palette is wiped so nothing off-system creeps in.
+ */
+@theme {
+  --color-*: initial;
+
+  --color-bg: #0a0a0a;
+  --color-surface: #111112;
+  --color-raised: #18181a;
+  --color-edge: #232326;
+  --color-edge-strong: #2e2e33;
+
+  --color-fg: #ededef;
+  --color-muted: #8b8b93;
+  --color-faint: #55555c;
+
+  --color-red: #e5484d;
+  --color-green: #46a758;
+  --color-amber: #ffb224;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-amber) 30%, transparent);
+}
