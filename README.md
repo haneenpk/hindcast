@@ -76,5 +76,6 @@ The pipeline is closed and the dashboard is open: the recorder batches
 rrweb events and ships them every five seconds (plus one last
 `sendBeacon` as the tab dies); ingest authenticates the project key,
 gzips each chunk into object storage, and indexes the session in
-Postgres; the dashboard manages projects and hands out install
-snippets. Next: the session list, then the player.
+Postgres; the dashboard manages projects, hands out install snippets,
+and lists recorded sessions with duration, pages and device. Next: the
+player.
