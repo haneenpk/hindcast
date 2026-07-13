@@ -60,10 +60,21 @@ cp apps/ingest/.env.example apps/ingest/.env
 pnpm --filter @hindcast/ingest start:dev    # listens on :4100
 ```
 
+And the dashboard:
+
+```sh
+cp apps/web/.env.example apps/web/.env     # set ADMIN_SECRET
+pnpm --filter @hindcast/web dev            # listens on :3000
+```
+
+The dashboard is locked behind the one `ADMIN_SECRET` — there are no
+user accounts to manage on a self-hosted single-team install.
+
 ## Status
 
-Early, but the pipeline is closed: the recorder batches rrweb events and
-ships them every five seconds (plus one last `sendBeacon` as the tab
-dies), and the ingest API authenticates the project key, gzips each
-chunk into object storage, and indexes the session in Postgres. Next up:
-the dashboard where sessions get watched.
+The pipeline is closed and the dashboard is open: the recorder batches
+rrweb events and ships them every five seconds (plus one last
+`sendBeacon` as the tab dies); ingest authenticates the project key,
+gzips each chunk into object storage, and indexes the session in
+Postgres; the dashboard manages projects and hands out install
+snippets. Next: the session list, then the player.
