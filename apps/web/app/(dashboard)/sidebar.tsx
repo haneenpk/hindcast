@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { logout } from "@/app/login/actions";
 import { NavLink } from "./nav-link";
 
 export function Sidebar() {
@@ -20,7 +21,14 @@ export function Sidebar() {
         <NavLink href="/projects">Projects</NavLink>
       </nav>
 
-      <div className="mt-auto px-2 pb-4" />
+      <form action={logout} className="mt-auto px-2 pb-4">
+        <button
+          type="submit"
+          className="w-full rounded-md px-2 py-1.5 text-left text-[13px] text-faint transition-colors hover:bg-raised/60 hover:text-muted"
+        >
+          Sign out
+        </button>
+      </form>
     </aside>
   );
 }
