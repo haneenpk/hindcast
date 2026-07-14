@@ -70,6 +70,20 @@ pnpm --filter @hindcast/web dev            # listens on :3000
 The dashboard is locked behind the one `ADMIN_SECRET` — there are no
 user accounts to manage on a self-hosted single-team install.
 
+To generate sessions worth watching, run Fernwood, the demo shop:
+
+```sh
+cp apps/demo/.env.example apps/demo/.env   # paste a project key
+pnpm --filter @hindcast/demo dev           # listens on :5173
+```
+
+Fernwood ships with three planted bugs — a coupon code that throws, a
+stock check that fails, and a newsletter signup nobody catches — so
+there is always something worth replaying.
+
+The ingest integration tests boot the built server against the compose
+stack, so have `docker compose up -d` running before `pnpm test`.
+
 ## Status
 
 The pipeline is closed and the dashboard is open: the recorder batches
@@ -78,4 +92,6 @@ rrweb events and ships them every five seconds (plus one last
 gzips each chunk into object storage, and indexes the session in
 Postgres; the dashboard manages projects, hands out install snippets,
 lists recorded sessions, and plays them back — click a session and
-watch it. Errors, network requests and the synced timeline are next.
+watch it. Fernwood, the demo shop, generates believable sessions with
+believable failures. Error capture in the SDK is next, so those
+failures start showing up on the timeline.
