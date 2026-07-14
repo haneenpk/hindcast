@@ -1,6 +1,7 @@
 import { EventBuffer } from "./buffer";
 import { debugLog, resolveConfig } from "./config";
 import type { HindcastConfig } from "./config";
+import { ErrorCapture } from "./errors";
 import { startRecorder } from "./recorder";
 import { openSession } from "./session";
 import { sendBatch } from "./transport";
@@ -8,6 +9,7 @@ import type { EventBatch } from "./types";
 
 interface ActiveRecording {
   stopRecorder(): void;
+  errorCapture: ErrorCapture;
   flushTimer: number;
   onVisibilityChange(): void;
   onPageHide(): void;
@@ -29,11 +31,13 @@ export function init(config: HindcastConfig): void {
 
     const session = openSession();
     const buffer = new EventBuffer();
+    const errorCapture = new ErrorCapture();
 
     const flush = (unloading: boolean): void => {
       try {
         const events = buffer.drain();
-        if (events.length === 0) return;
+        const errors = errorCapture.drain();
+        if (events.length === 0 && errors.length === 0) return;
         const batch: EventBatch = {
           v: 1,
           key: resolved.key,
@@ -43,7 +47,15 @@ export function init(config: HindcastConfig): void {
           url: window.location.href,
           events,
         };
-        debugLog(resolved, `flush #${batch.seq}:`, events.length, "events");
+        if (errors.length > 0) batch.errors = errors;
+        debugLog(
+          resolved,
+          `flush #${batch.seq}:`,
+          events.length,
+          "events,",
+          errors.length,
+          "errors",
+        );
         sendBatch(resolved, batch, unloading);
       } catch {
         /* dropping a batch beats surfacing an error on the host page */
@@ -54,6 +66,7 @@ export function init(config: HindcastConfig): void {
       if (buffer.push(event)) flush(false);
     });
     if (!stopRecorder) return;
+    errorCapture.start();
 
     const flushTimer = window.setInterval(() => flush(false), resolved.flushIntervalMs);
     const onVisibilityChange = (): void => {
@@ -67,7 +80,14 @@ export function init(config: HindcastConfig): void {
     window.addEventListener("pagehide", onPageHide);
 
     debugLog(resolved, "recording session", session.id);
-    active = { stopRecorder, flushTimer, onVisibilityChange, onPageHide, flush };
+    active = {
+      stopRecorder,
+      errorCapture,
+      flushTimer,
+      onVisibilityChange,
+      onPageHide,
+      flush,
+    };
   } catch {
     active = null;
   }
@@ -83,6 +103,7 @@ export function stop(): void {
     document.removeEventListener("visibilitychange", current.onVisibilityChange);
     window.removeEventListener("pagehide", current.onPageHide);
     current.stopRecorder();
+    current.errorCapture.stop();
     current.flush(false);
   } catch {
     /* even teardown stays silent */
