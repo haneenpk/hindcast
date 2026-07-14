@@ -76,8 +76,14 @@ export default async function ProjectSessionsPage({ params }: Props) {
               className="grid grid-cols-[minmax(0,1fr)_150px_60px_70px_80px] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised/50"
             >
               <span className="min-w-0">
-                <span className="block truncate text-[13px]">
-                  {entryPath(session.entryUrl)}
+                <span className="flex items-center gap-1.5 text-[13px]">
+                  {session.hasError ? (
+                    <span
+                      className="bg-red h-1.5 w-1.5 shrink-0 rounded-full"
+                      title="Session captured errors"
+                    />
+                  ) : null}
+                  <span className="truncate">{entryPath(session.entryUrl)}</span>
                 </span>
                 <span className="text-faint block font-mono text-[11px]">
                   {session.id.slice(0, 8)}

@@ -92,6 +92,8 @@ rrweb events and ships them every five seconds (plus one last
 gzips each chunk into object storage, and indexes the session in
 Postgres; the dashboard manages projects, hands out install snippets,
 lists recorded sessions, and plays them back — click a session and
-watch it. Fernwood, the demo shop, generates believable sessions with
-believable failures. Error capture in the SDK is next, so those
-failures start showing up on the timeline.
+watch it. The recorder captures uncaught errors, unhandled rejections
+and console.error with timestamps, and sessions that broke wear a red
+dot in the list. Fernwood, the demo shop, generates believable sessions
+with believable failures. Network capture is next, then the synced
+timeline that ties it all together under the player.

@@ -1,2 +1,10 @@
-export { eventBatchSchema, recordedEventSchema } from "./event-batch";
-export type { EventBatchInput, RecordedEventInput } from "./event-batch";
+export {
+  capturedErrorSchema,
+  eventBatchSchema,
+  recordedEventSchema,
+} from "./event-batch";
+export type {
+  CapturedErrorInput,
+  EventBatchInput,
+  RecordedEventInput,
+} from "./event-batch";

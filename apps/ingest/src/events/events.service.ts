@@ -3,9 +3,15 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
-import { Prisma, prisma } from "@hindcast/db";
-import type { EventBatchInput } from "@hindcast/shared";
+import { ErrorSource, Prisma, prisma } from "@hindcast/db";
+import type { CapturedErrorInput, EventBatchInput } from "@hindcast/shared";
 import { StorageService } from "../storage/storage.service";
+
+const SOURCE_MAP: Record<CapturedErrorInput["source"], ErrorSource> = {
+  window_error: ErrorSource.WINDOW_ERROR,
+  unhandled_rejection: ErrorSource.UNHANDLED_REJECTION,
+  console_error: ErrorSource.CONSOLE_ERROR,
+};
 
 @Injectable()
 export class EventsService {
@@ -27,19 +33,29 @@ export class EventsService {
       throw new ForbiddenException();
     }
 
+    const errors = batch.errors ?? [];
+
     let firstMs = Number.POSITIVE_INFINITY;
     let lastMs = 0;
     for (const event of batch.events) {
       if (event.timestamp < firstMs) firstMs = event.timestamp;
       if (event.timestamp > lastMs) lastMs = event.timestamp;
     }
-    const firstEventAt = new Date(firstMs);
-    const lastEventAt = new Date(lastMs);
+    // Errors advance session activity too — an errors-only batch must
+    // still move lastEventAt so duration reflects reality.
+    let lastActivityMs = lastMs;
+    for (const error of errors) {
+      if (error.timestamp > lastActivityMs) lastActivityMs = error.timestamp;
+    }
+    const lastActivityAt = new Date(lastActivityMs || batch.startedAt);
 
     const storageKey = `${project.id}/${batch.sessionId}/${String(batch.seq).padStart(6, "0")}.json.gz`;
-    // Object first, row second: a row pointing at a missing chunk breaks
-    // the player, an orphaned object just waits for retention cleanup.
-    const sizeBytes = await this.storage.putGzippedJson(storageKey, batch.events);
+    let sizeBytes = 0;
+    if (batch.events.length > 0) {
+      // Object first, row second: a row pointing at a missing chunk breaks
+      // the player, an orphaned object just waits for retention cleanup.
+      sizeBytes = await this.storage.putGzippedJson(storageKey, batch.events);
+    }
 
     if (!existing) {
       try {
@@ -48,40 +64,74 @@ export class EventsService {
             id: batch.sessionId,
             projectId: project.id,
             startedAt: new Date(batch.startedAt),
-            lastEventAt,
+            lastEventAt: lastActivityAt,
             entryUrl: batch.url.slice(0, 2048),
             userAgent: userAgent ? userAgent.slice(0, 512) : null,
+            hasError: errors.length > 0,
           },
         });
       } catch (error) {
         // Two batches of a brand-new session racing each other.
         if (!isUniqueViolation(error)) throw error;
       }
-    } else if (lastEventAt > existing.lastEventAt) {
-      await prisma.session.update({
-        where: { id: existing.id },
-        data: { lastEventAt },
-      });
+    } else {
+      const data: { lastEventAt?: Date; hasError?: boolean } = {};
+      if (lastActivityAt > existing.lastEventAt) data.lastEventAt = lastActivityAt;
+      if (errors.length > 0 && !existing.hasError) data.hasError = true;
+      if (Object.keys(data).length > 0) {
+        await prisma.session.update({ where: { id: existing.id }, data });
+      }
     }
 
-    try {
-      await prisma.eventChunk.create({
-        data: {
+    let firstDelivery = true;
+    if (batch.events.length > 0) {
+      try {
+        await prisma.eventChunk.create({
+          data: {
+            sessionId: batch.sessionId,
+            seq: batch.seq,
+            storageKey,
+            sizeBytes,
+            eventCount: batch.events.length,
+            pageUrl: batch.url.slice(0, 2048),
+            firstEventAt: new Date(firstMs),
+            lastEventAt: new Date(lastMs),
+          },
+        });
+      } catch (error) {
+        // The same chunk delivered twice (beacon and keepalive fetch can
+        // both win). The object was overwritten with identical bytes, so
+        // keeping the first row is the correct outcome.
+        if (!isUniqueViolation(error)) throw error;
+        firstDelivery = false;
+      }
+    } else if (errors.length > 0) {
+      // Errors-only batches have no chunk row to dedupe on; a duplicate
+      // delivery is caught by looking for the first error instead.
+      const probe = errors[0]!;
+      const seen = await prisma.errorEvent.findFirst({
+        where: {
           sessionId: batch.sessionId,
-          seq: batch.seq,
-          storageKey,
-          sizeBytes,
-          eventCount: batch.events.length,
-          pageUrl: batch.url.slice(0, 2048),
-          firstEventAt,
-          lastEventAt,
+          timestamp: new Date(probe.timestamp),
+          source: SOURCE_MAP[probe.source],
+          message: probe.message,
         },
+        select: { id: true },
       });
-    } catch (error) {
-      // The same chunk delivered twice (beacon and keepalive fetch can
-      // both win). The object was overwritten with identical bytes, so
-      // keeping the first row is the correct outcome.
-      if (!isUniqueViolation(error)) throw error;
+      firstDelivery = seen === null;
+    }
+
+    if (errors.length > 0 && firstDelivery) {
+      await prisma.errorEvent.createMany({
+        data: errors.map((error) => ({
+          sessionId: batch.sessionId,
+          timestamp: new Date(error.timestamp),
+          source: SOURCE_MAP[error.source],
+          message: error.message,
+          stack: error.stack ?? null,
+          pageUrl: (error.url ?? batch.url).slice(0, 2048),
+        })),
+      });
     }
   }
 }
