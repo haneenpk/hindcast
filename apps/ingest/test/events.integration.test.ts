@@ -175,4 +175,93 @@ describe("POST /v1/events", () => {
     };
     expect((await post(hijack)).status).toBe(403);
   });
+
+  it("persists captured errors and flags the session", async () => {
+    const sessionId = randomUUID();
+    const startedAt = Date.now() - 8000;
+    const batch = {
+      ...makeBatch(sessionId, 0, startedAt),
+      errors: [
+        {
+          timestamp: startedAt + 2000,
+          source: "window_error",
+          message: "Cannot read properties of undefined (reading 'percent')",
+          stack: "TypeError: Cannot read properties of undefined\n    at applyCoupon",
+          url: "https://shop.example.com/checkout",
+        },
+        {
+          timestamp: startedAt + 3000,
+          source: "console_error",
+          message: "stock check failed: HTTP 404",
+        },
+      ],
+    };
+
+    expect((await post(batch)).status).toBe(202);
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: { errors: { orderBy: { timestamp: "asc" } } },
+    });
+    expect(session?.hasError).toBe(true);
+    expect(session?.errors).toHaveLength(2);
+    expect(session?.errors[0]?.source).toBe("WINDOW_ERROR");
+    expect(session?.errors[0]?.stack).toContain("applyCoupon");
+    expect(session?.errors[1]?.source).toBe("CONSOLE_ERROR");
+    expect(session?.errors[1]?.pageUrl).toBe(batch.url);
+  });
+
+  it("does not double-insert errors on duplicate delivery", async () => {
+    const sessionId = randomUUID();
+    const batch = {
+      ...makeBatch(sessionId, 0, Date.now() - 5000),
+      errors: [
+        {
+          timestamp: Date.now() - 4000,
+          source: "unhandled_rejection",
+          message: "newsletter signup failed: HTTP 404",
+        },
+      ],
+    };
+
+    expect((await post(batch)).status).toBe(202);
+    expect((await post(batch)).status).toBe(202);
+
+    const count = await prisma.errorEvent.count({ where: { sessionId } });
+    expect(count).toBe(1);
+  });
+
+  it("accepts an errors-only batch and advances lastEventAt", async () => {
+    const sessionId = randomUUID();
+    const startedAt = Date.now() - 60_000;
+    await post(makeBatch(sessionId, 0, startedAt));
+
+    const errorAt = startedAt + 45_000;
+    const errorsOnly = {
+      ...makeBatch(sessionId, 1, startedAt),
+      events: [],
+      errors: [
+        {
+          timestamp: errorAt,
+          source: "window_error",
+          message: "async crash on an idle page",
+        },
+      ],
+    };
+    expect((await post(errorsOnly)).status).toBe(202);
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    expect(session?.hasError).toBe(true);
+    expect(session?.lastEventAt.getTime()).toBe(errorAt);
+
+    const chunks = await prisma.eventChunk.count({ where: { sessionId } });
+    expect(chunks).toBe(1); // no chunk row for the eventless batch
+  });
+
+  it("rejects a batch with neither events nor errors", async () => {
+    const empty = { ...makeBatch(randomUUID(), 0, Date.now()), events: [] };
+    expect((await post(empty)).status).toBe(400);
+  });
 });
