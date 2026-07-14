@@ -4,14 +4,29 @@ import { useSyncExternalStore } from "react";
 import { clearCart, getCart, subscribe } from "../cart";
 import { findProduct, formatPrice } from "../products";
 
+const COUPONS = [{ code: "WELCOME10", percent: 10 }];
+
 export function CheckoutPage() {
   const cart = useSyncExternalStore(subscribe, getCart);
+  const [coupon, setCoupon] = useState("");
+  const [discount, setDiscount] = useState(0);
   const [placed, setPlaced] = useState(false);
 
-  const total = cart.reduce(
+  const subtotal = cart.reduce(
     (sum, line) => sum + line.qty * (findProduct(line.slug)?.price ?? 0),
     0,
   );
+  const total = Math.round(subtotal * (1 - discount / 100));
+
+  const applyCoupon = () => {
+    const match = COUPONS.find(
+      (entry) => entry.code === coupon.trim().toUpperCase(),
+    );
+    // planted: an unknown code leaves `match` undefined and the next line
+    // throws in front of the customer. This is the bug the demo session
+    // replays are about.
+    setDiscount(match!.percent);
+  };
 
   if (placed) {
     return (
@@ -111,8 +126,32 @@ export function CheckoutPage() {
           </div>
         </fieldset>
 
+        <fieldset>
+          <legend>Discount</legend>
+          <div className="field-row coupon-row">
+            <label>
+              Coupon code
+              <input
+                value={coupon}
+                onChange={(event) => setCoupon(event.target.value)}
+                placeholder="WELCOME10"
+              />
+            </label>
+            <button
+              type="button"
+              className="button-quiet"
+              onClick={applyCoupon}
+            >
+              Apply
+            </button>
+          </div>
+          {discount > 0 ? (
+            <p className="coupon-note">{discount}% off applied.</p>
+          ) : null}
+        </fieldset>
+
         <div className="order-summary">
-          <span>Total</span>
+          <span>{discount > 0 ? `Total after ${discount}% off` : "Total"}</span>
           <span className="price-lg">{formatPrice(total)}</span>
         </div>
 

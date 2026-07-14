@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { checkStock } from "../api";
 import { addToCart } from "../cart";
 import { findProduct, formatPrice } from "../products";
 
@@ -7,6 +8,8 @@ export function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
+  const [stockNote, setStockNote] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
   const product = slug ? findProduct(slug) : undefined;
   if (!product) {
@@ -60,6 +63,28 @@ export function ProductPage() {
           >
             Add to cart
           </button>
+        </div>
+
+        <div className="stock-row">
+          <button
+            className="button-quiet"
+            disabled={checking}
+            onClick={() => {
+              setChecking(true);
+              setStockNote(null);
+              checkStock(product.slug)
+                .then((available) => setStockNote(`${available} in stock`))
+                .catch(() =>
+                  setStockNote(
+                    "Couldn't check availability — try again in a minute.",
+                  ),
+                )
+                .finally(() => setChecking(false));
+            }}
+          >
+            {checking ? "Checking…" : "Check availability"}
+          </button>
+          {stockNote ? <span className="stock-note">{stockNote}</span> : null}
         </div>
       </div>
     </section>

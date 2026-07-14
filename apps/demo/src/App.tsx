@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { Link, Outlet } from "react-router-dom";
+import { subscribeToNewsletter } from "./api";
 import { getCart, subscribe } from "./cart";
 
 export function App() {
@@ -29,6 +30,29 @@ export function App() {
             Solid-wood furniture and considered objects, made to be kept.
           </p>
         </div>
+        <form
+          className="newsletter"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const input = event.currentTarget.elements.namedItem(
+              "email",
+            ) as HTMLInputElement;
+            subscribeToNewsletter(input.value);
+            input.value = "";
+          }}
+        >
+          <label htmlFor="newsletter-email">New pieces, twice a month</label>
+          <div className="newsletter-row">
+            <input
+              id="newsletter-email"
+              name="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+            />
+            <button type="submit">Sign up</button>
+          </div>
+        </form>
       </footer>
     </>
   );
