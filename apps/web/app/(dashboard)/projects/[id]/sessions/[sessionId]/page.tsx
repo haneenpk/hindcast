@@ -15,6 +15,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `Session ${sessionId.slice(0, 8)}` };
 }
 
+function shortUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname + parsed.search;
+  } catch {
+    return url;
+  }
+}
+
 export default async function SessionPage({ params }: Props) {
   const { id, sessionId } = await params;
   const session = await prisma.session.findUnique({
@@ -22,6 +31,34 @@ export default async function SessionPage({ params }: Props) {
     include: { _count: { select: { chunks: true } } },
   });
   if (!session || session.projectId !== id) notFound();
+
+  const [errors, failedRequests] = await Promise.all([
+    prisma.errorEvent.findMany({
+      where: { sessionId },
+      orderBy: { timestamp: "asc" },
+    }),
+    prisma.networkEvent.findMany({
+      // No status means the request never got a response — that's as
+      // failed as failed gets.
+      where: { sessionId, OR: [{ status: null }, { status: { gte: 400 } }] },
+      orderBy: { timestamp: "asc" },
+    }),
+  ]);
+
+  const markers = [
+    ...errors.map((error) => ({
+      id: error.id,
+      kind: "error" as const,
+      timestamp: error.timestamp.getTime(),
+      label: error.message.slice(0, 140),
+    })),
+    ...failedRequests.map((request) => ({
+      id: request.id,
+      kind: "network" as const,
+      timestamp: request.timestamp.getTime(),
+      label: `${request.method} ${shortUrl(request.url)} → ${request.status ?? "no response"}`,
+    })),
+  ].sort((a, b) => a.timestamp - b.timestamp);
 
   const durationMs =
     session.lastEventAt.getTime() - session.startedAt.getTime();
@@ -52,7 +89,7 @@ export default async function SessionPage({ params }: Props) {
         </p>
       </div>
 
-      <SessionPlayer sessionId={session.id} />
+      <SessionPlayer sessionId={session.id} markers={markers} />
     </div>
   );
 }
