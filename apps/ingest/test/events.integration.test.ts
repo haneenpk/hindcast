@@ -264,4 +264,83 @@ describe("POST /v1/events", () => {
     const empty = { ...makeBatch(randomUUID(), 0, Date.now()), events: [] };
     expect((await post(empty)).status).toBe(400);
   });
+
+  it("persists request outcomes, statusless ones included", async () => {
+    const sessionId = randomUUID();
+    const startedAt = Date.now() - 8000;
+    const batch = {
+      ...makeBatch(sessionId, 0, startedAt),
+      network: [
+        {
+          timestamp: startedAt + 1000,
+          method: "GET",
+          url: "https://shop.example.com/api/products",
+          status: 200,
+          durationMs: 84,
+        },
+        {
+          timestamp: startedAt + 2000,
+          method: "POST",
+          url: "https://shop.example.com/api/stock-check",
+          status: 404,
+          durationMs: 51,
+        },
+        {
+          timestamp: startedAt + 3000,
+          method: "GET",
+          url: "https://cdn.down.example.com/hero.jpg",
+          durationMs: 4013,
+        },
+      ],
+    };
+
+    expect((await post(batch)).status).toBe(202);
+
+    const rows = await prisma.networkEvent.findMany({
+      where: { sessionId },
+      orderBy: { timestamp: "asc" },
+    });
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatchObject({ method: "GET", status: 200, durationMs: 84 });
+    expect(rows[1]).toMatchObject({ method: "POST", status: 404 });
+    expect(rows[2]?.status).toBeNull();
+  });
+
+  it("accepts a network-only batch, advances lastEventAt, dedupes duplicates", async () => {
+    const sessionId = randomUUID();
+    const startedAt = Date.now() - 60_000;
+    await post(makeBatch(sessionId, 0, startedAt));
+
+    const lastAt = startedAt + 45_000;
+    const networkOnly = {
+      ...makeBatch(sessionId, 1, startedAt),
+      events: [],
+      network: [
+        {
+          timestamp: startedAt + 40_000,
+          method: "GET",
+          url: "https://shop.example.com/api/poll",
+          status: 200,
+          durationMs: 130,
+        },
+        {
+          timestamp: lastAt,
+          method: "GET",
+          url: "https://shop.example.com/api/poll",
+          status: 200,
+          durationMs: 118,
+        },
+      ],
+    };
+
+    expect((await post(networkOnly)).status).toBe(202);
+    expect((await post(networkOnly)).status).toBe(202);
+
+    const rows = await prisma.networkEvent.count({ where: { sessionId } });
+    expect(rows).toBe(2);
+
+    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    expect(session?.lastEventAt.getTime()).toBe(lastAt);
+    expect(session?.hasError).toBe(false); // failed requests are not errors
+  });
 });
