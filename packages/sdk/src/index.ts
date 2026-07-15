@@ -2,6 +2,7 @@ import { EventBuffer } from "./buffer";
 import { debugLog, resolveConfig } from "./config";
 import type { HindcastConfig } from "./config";
 import { ErrorCapture } from "./errors";
+import { NetworkCapture } from "./network";
 import { startRecorder } from "./recorder";
 import { openSession } from "./session";
 import { sendBatch } from "./transport";
@@ -10,6 +11,7 @@ import type { EventBatch } from "./types";
 interface ActiveRecording {
   stopRecorder(): void;
   errorCapture: ErrorCapture;
+  networkCapture: NetworkCapture;
   flushTimer: number;
   onVisibilityChange(): void;
   onPageHide(): void;
@@ -32,12 +34,15 @@ export function init(config: HindcastConfig): void {
     const session = openSession();
     const buffer = new EventBuffer();
     const errorCapture = new ErrorCapture();
+    const networkCapture = new NetworkCapture(resolved.endpoint);
 
     const flush = (unloading: boolean): void => {
       try {
         const events = buffer.drain();
         const errors = errorCapture.drain();
-        if (events.length === 0 && errors.length === 0) return;
+        const network = networkCapture.drain();
+        if (events.length === 0 && errors.length === 0 && network.length === 0)
+          return;
         const batch: EventBatch = {
           v: 1,
           key: resolved.key,
@@ -48,13 +53,16 @@ export function init(config: HindcastConfig): void {
           events,
         };
         if (errors.length > 0) batch.errors = errors;
+        if (network.length > 0) batch.network = network;
         debugLog(
           resolved,
           `flush #${batch.seq}:`,
           events.length,
           "events,",
           errors.length,
-          "errors",
+          "errors,",
+          network.length,
+          "requests",
         );
         sendBatch(resolved, batch, unloading);
       } catch {
@@ -67,6 +75,7 @@ export function init(config: HindcastConfig): void {
     });
     if (!stopRecorder) return;
     errorCapture.start();
+    networkCapture.start();
 
     const flushTimer = window.setInterval(() => flush(false), resolved.flushIntervalMs);
     const onVisibilityChange = (): void => {
@@ -83,6 +92,7 @@ export function init(config: HindcastConfig): void {
     active = {
       stopRecorder,
       errorCapture,
+      networkCapture,
       flushTimer,
       onVisibilityChange,
       onPageHide,
@@ -104,6 +114,7 @@ export function stop(): void {
     window.removeEventListener("pagehide", current.onPageHide);
     current.stopRecorder();
     current.errorCapture.stop();
+    current.networkCapture.stop();
     current.flush(false);
   } catch {
     /* even teardown stays silent */

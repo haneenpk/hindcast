@@ -19,6 +19,16 @@ export const capturedErrorSchema = z.object({
   url: z.string().max(2048).optional(),
 });
 
+// Request outcomes only — the schema has no field a body could even
+// arrive in.
+export const capturedRequestSchema = z.object({
+  timestamp: z.number().int().positive(),
+  method: z.string().min(1).max(16),
+  url: z.string().min(1).max(2048),
+  status: z.number().int().min(100).max(999).optional(),
+  durationMs: z.number().int().min(0).max(3_600_000),
+});
+
 export const eventBatchSchema = z
   .object({
     v: z.literal(1),
@@ -27,16 +37,21 @@ export const eventBatchSchema = z
     seq: z.number().int().min(0).max(1_000_000),
     startedAt: z.number().int().positive(),
     url: z.string().min(1).max(2048),
-    // A batch may be errors-only: an async crash on an idle page produces
-    // no DOM events, and it still has to reach the server.
+    // A batch may carry no DOM events: an async crash or a burst of
+    // requests on an idle page still has to reach the server.
     events: z.array(recordedEventSchema).max(10_000),
     errors: z.array(capturedErrorSchema).max(50).optional(),
+    network: z.array(capturedRequestSchema).max(500).optional(),
   })
   .refine(
-    (batch) => batch.events.length > 0 || (batch.errors?.length ?? 0) > 0,
-    { message: "batch carries neither events nor errors" },
+    (batch) =>
+      batch.events.length > 0 ||
+      (batch.errors?.length ?? 0) > 0 ||
+      (batch.network?.length ?? 0) > 0,
+    { message: "batch carries no events, errors or requests" },
   );
 
 export type RecordedEventInput = z.infer<typeof recordedEventSchema>;
 export type CapturedErrorInput = z.infer<typeof capturedErrorSchema>;
+export type CapturedRequestInput = z.infer<typeof capturedRequestSchema>;
 export type EventBatchInput = z.infer<typeof eventBatchSchema>;
