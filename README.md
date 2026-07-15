@@ -94,6 +94,8 @@ Postgres; the dashboard manages projects, hands out install snippets,
 lists recorded sessions, and plays them back — click a session and
 watch it. The recorder captures uncaught errors, unhandled rejections
 and console.error with timestamps, and sessions that broke wear a red
-dot in the list. Fernwood, the demo shop, generates believable sessions
-with believable failures. Network capture is next, then the synced
-timeline that ties it all together under the player.
+dot in the list. It also records every fetch and XHR outcome — method,
+url, status, duration; never bodies — including requests that got no
+answer at all. Fernwood, the demo shop, generates believable sessions
+with believable failures. Next: the synced timeline that ties errors
+and failed requests to the exact moment in the replay.
