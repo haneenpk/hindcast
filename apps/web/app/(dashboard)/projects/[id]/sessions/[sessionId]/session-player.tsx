@@ -13,7 +13,7 @@ interface ReplayerLike {
   play(offsetMs?: number): void;
   pause(offsetMs?: number): void;
   getCurrentTime(): number;
-  getMetaData(): { totalTime: number };
+  getMetaData(): { startTime: number; totalTime: number };
   on(event: string, handler: () => void): void;
 }
 
@@ -22,7 +22,20 @@ interface RecordedEvent {
   data?: { width?: number; height?: number };
 }
 
-export function SessionPlayer({ sessionId }: { sessionId: string }) {
+export interface TimelineMarker {
+  id: string;
+  kind: "error" | "network";
+  timestamp: number;
+  label: string;
+}
+
+export function SessionPlayer({
+  sessionId,
+  markers = [],
+}: {
+  sessionId: string;
+  markers?: TimelineMarker[];
+}) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const replayerRef = useRef<ReplayerLike | null>(null);
@@ -31,6 +44,7 @@ export function SessionPlayer({ sessionId }: { sessionId: string }) {
   const [finished, setFinished] = useState(false);
   const [timeMs, setTimeMs] = useState(0);
   const [totalMs, setTotalMs] = useState(0);
+  const [startTime, setStartTime] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +90,9 @@ export function SessionPlayer({ sessionId }: { sessionId: string }) {
         }
 
         replayer.pause(0); // render the first frame instead of a blank stage
-        setTotalMs(replayer.getMetaData().totalTime);
+        const replayMeta = replayer.getMetaData();
+        setTotalMs(replayMeta.totalTime);
+        setStartTime(replayMeta.startTime);
         replayer.on("finish", () => {
           setPlaying(false);
           setFinished(true);
@@ -186,15 +202,38 @@ export function SessionPlayer({ sessionId }: { sessionId: string }) {
           <span className="text-muted w-12 text-right font-mono text-xs tabular-nums">
             {formatClock(Math.min(timeMs, totalMs))}
           </span>
-          <input
-            type="range"
-            min={0}
-            max={Math.max(totalMs, 1)}
-            value={Math.min(timeMs, totalMs)}
-            onChange={(event) => seek(Number(event.target.value))}
-            className="accent-amber h-1 min-w-0 flex-1"
-            aria-label="Seek"
-          />
+          <div className="relative flex h-7 min-w-0 flex-1 items-end">
+            {totalMs > 0
+              ? markers.map((marker) => {
+                  const offset = Math.min(
+                    Math.max(marker.timestamp - startTime, 0),
+                    totalMs,
+                  );
+                  return (
+                    <button
+                      key={marker.id}
+                      type="button"
+                      onClick={() => seek(offset)}
+                      title={`${formatClock(offset)} · ${marker.label}`}
+                      aria-label={`Jump to ${marker.kind} at ${formatClock(offset)}`}
+                      className={`absolute top-0.5 h-2 w-0.75 -translate-x-1/2 rounded-full transition-[height] hover:h-3 ${
+                        marker.kind === "error" ? "bg-red" : "bg-amber"
+                      }`}
+                      style={{ left: `${(offset / totalMs) * 100}%` }}
+                    />
+                  );
+                })
+              : null}
+            <input
+              type="range"
+              min={0}
+              max={Math.max(totalMs, 1)}
+              value={Math.min(timeMs, totalMs)}
+              onChange={(event) => seek(Number(event.target.value))}
+              className="accent-amber mb-1 h-1 w-full"
+              aria-label="Seek"
+            />
+          </div>
           <span className="text-faint w-12 font-mono text-xs tabular-nums">
             {formatClock(totalMs)}
           </span>

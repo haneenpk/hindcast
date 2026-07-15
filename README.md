@@ -96,6 +96,7 @@ watch it. The recorder captures uncaught errors, unhandled rejections
 and console.error with timestamps, and sessions that broke wear a red
 dot in the list. It also records every fetch and XHR outcome — method,
 url, status, duration; never bodies — including requests that got no
-answer at all. Fernwood, the demo shop, generates believable sessions
-with believable failures. Next: the synced timeline that ties errors
-and failed requests to the exact moment in the replay.
+answer at all. Errors and failed requests sit on the player's timeline
+as markers — click one and the replay lands on that exact moment.
+Fernwood, the demo shop, generates believable sessions with believable
+failures. Next: console and network lanes with detail drawers.
