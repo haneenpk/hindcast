@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { formatClock } from "@/lib/format";
+import { SessionLanes } from "./session-lanes";
+import type { ConsoleEntry, NetworkEntry } from "./session-lanes";
 import "@rrweb/replay/dist/style.css";
 
 // Built straight on @rrweb/replay: the rrweb-player UI package (2.1.0)
@@ -32,9 +35,13 @@ export interface TimelineMarker {
 export function SessionPlayer({
   sessionId,
   markers = [],
+  consoleEntries = [],
+  networkEntries = [],
 }: {
   sessionId: string;
   markers?: TimelineMarker[];
+  consoleEntries?: ConsoleEntry[];
+  networkEntries?: NetworkEntry[];
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -238,14 +245,15 @@ export function SessionPlayer({
             {formatClock(totalMs)}
           </span>
         </div>
+
+        <SessionLanes
+          consoleEntries={consoleEntries}
+          networkEntries={networkEntries}
+          startTime={startTime}
+          totalMs={totalMs}
+          onJump={seek}
+        />
       </div>
     </div>
   );
-}
-
-function formatClock(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
