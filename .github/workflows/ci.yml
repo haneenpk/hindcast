@@ -34,19 +34,16 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
-      # bitnami's image starts the server from env alone — plain minio/minio
-      # needs a command, which service containers can't set.
-      minio:
-        image: bitnami/minio:latest
-        env:
-          MINIO_ROOT_USER: hindcast
-          MINIO_ROOT_PASSWORD: hindcast-dev
-          MINIO_DEFAULT_BUCKETS: hindcast-events
-        ports:
-          - "9000:9000"
-
     steps:
       - uses: actions/checkout@v4
+
+      # Service containers can't set a command and minio/minio needs one,
+      # so minio starts as a plain container instead.
+      - name: start minio
+        run: >-
+          docker run -d --name minio -p 9000:9000
+          -e MINIO_ROOT_USER=hindcast -e MINIO_ROOT_PASSWORD=hindcast-dev
+          minio/minio server /data
 
       - uses: pnpm/action-setup@v4
 
@@ -56,6 +53,13 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      - name: create events bucket
+        run: >-
+          docker run --rm --network host --entrypoint /bin/sh minio/mc -c
+          "for i in $(seq 1 30); do
+          mc alias set local http://localhost:9000 hindcast hindcast-dev && break || sleep 2;
+          done && mc mb --ignore-existing local/hindcast-events"
 
       - run: pnpm db:generate
 
