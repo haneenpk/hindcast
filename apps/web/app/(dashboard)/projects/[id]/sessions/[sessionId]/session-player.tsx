@@ -80,6 +80,10 @@ export function SessionPlayer({
         const replayer = new Replayer(events as never[], {
           root: stage,
           showWarning: false,
+          // Defaults to true: replaying a recorded focus event calls real
+          // .focus(), which steals the viewer's keyboard into the replayed
+          // input — you could type into the footage without clicking.
+          triggerFocus: false,
         }) as unknown as ReplayerLike;
         replayerRef.current = replayer;
 
@@ -95,6 +99,9 @@ export function SessionPlayer({
         if (replayerWrapper) {
           replayerWrapper.style.transform = `scale(${scale})`;
         }
+        // pointer-events: none stops the mouse; inert also stops keyboard
+        // focus from tabbing into the replayed document.
+        stage.querySelector("iframe")?.setAttribute("inert", "");
 
         replayer.pause(0); // render the first frame instead of a blank stage
         const replayMeta = replayer.getMetaData();

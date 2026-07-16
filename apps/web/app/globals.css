@@ -49,4 +49,6 @@ body {
 .session-stage iframe {
   border: none;
   background: #fff;
+  /* the replay is footage, not a form — nothing inside is interactive */
+  pointer-events: none;
 }
