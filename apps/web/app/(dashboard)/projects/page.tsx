@@ -6,6 +6,10 @@ import { createProject } from "./actions";
 
 export const metadata: Metadata = { title: "Projects" };
 
+// Without this, next build prerenders the list once and next start serves
+// that snapshot forever — projects created after the build never appear.
+export const dynamic = "force-dynamic";
+
 export default async function ProjectsPage() {
   const projects = await prisma.project.findMany({
     orderBy: { createdAt: "desc" },
