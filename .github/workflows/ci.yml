@@ -54,12 +54,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # By now minio has had the whole install to finish booting.
       - name: create events bucket
         run: >-
           docker run --rm --network host --entrypoint /bin/sh minio/mc -c
-          "for i in $(seq 1 30); do
-          mc alias set local http://localhost:9000 hindcast hindcast-dev && break || sleep 2;
-          done && mc mb --ignore-existing local/hindcast-events"
+          "mc alias set local http://localhost:9000 hindcast hindcast-dev
+          && mc mb --ignore-existing local/hindcast-events"
 
       - run: pnpm db:generate
 
