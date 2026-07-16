@@ -99,6 +99,8 @@ and console.error with timestamps, and sessions that broke wear a red
 dot in the list. It also records every fetch and XHR outcome — method,
 url, status, duration; never bodies — including requests that got no
 answer at all. Errors and failed requests sit on the player's timeline
-as markers — click one and the replay lands on that exact moment.
-Fernwood, the demo shop, generates believable sessions with believable
-failures. Next: console and network lanes with detail drawers.
+as markers, and console and network lanes under the player carry the
+detail — click a row for the full stack or request, then jump the
+replay to that moment. Fernwood, the demo shop, generates believable
+sessions with believable failures. Next: filters and search on the
+session list.

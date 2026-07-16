@@ -32,18 +32,22 @@ export default async function SessionPage({ params }: Props) {
   });
   if (!session || session.projectId !== id) notFound();
 
-  const [errors, failedRequests] = await Promise.all([
+  const [errors, requests] = await Promise.all([
     prisma.errorEvent.findMany({
       where: { sessionId },
       orderBy: { timestamp: "asc" },
     }),
     prisma.networkEvent.findMany({
-      // No status means the request never got a response — that's as
-      // failed as failed gets.
-      where: { sessionId, OR: [{ status: null }, { status: { gte: 400 } }] },
+      where: { sessionId },
       orderBy: { timestamp: "asc" },
     }),
   ]);
+
+  // No status means the request never got a response — that's as failed
+  // as failed gets.
+  const failedRequests = requests.filter(
+    (request) => request.status === null || request.status >= 400,
+  );
 
   const markers = [
     ...errors.map((error) => ({
@@ -59,6 +63,24 @@ export default async function SessionPage({ params }: Props) {
       label: `${request.method} ${shortUrl(request.url)} → ${request.status ?? "no response"}`,
     })),
   ].sort((a, b) => a.timestamp - b.timestamp);
+
+  const consoleEntries = errors.map((error) => ({
+    id: error.id,
+    timestamp: error.timestamp.getTime(),
+    source: error.source,
+    message: error.message,
+    stack: error.stack,
+    pageUrl: error.pageUrl,
+  }));
+
+  const networkEntries = requests.map((request) => ({
+    id: request.id,
+    timestamp: request.timestamp.getTime(),
+    method: request.method,
+    url: request.url,
+    status: request.status,
+    durationMs: request.durationMs,
+  }));
 
   const durationMs =
     session.lastEventAt.getTime() - session.startedAt.getTime();
@@ -89,7 +111,12 @@ export default async function SessionPage({ params }: Props) {
         </p>
       </div>
 
-      <SessionPlayer sessionId={session.id} markers={markers} />
+      <SessionPlayer
+        sessionId={session.id}
+        markers={markers}
+        consoleEntries={consoleEntries}
+        networkEntries={networkEntries}
+      />
     </div>
   );
 }
