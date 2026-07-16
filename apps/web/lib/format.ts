@@ -18,6 +18,13 @@ export function formatDuration(ms: number): string {
   return `${hours}h ${(minutes % 60).toString().padStart(2, "0")}m`;
 }
 
+export function formatClock(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 export function formatRelative(date: Date, now = Date.now()): string {
   const diffSeconds = Math.round((now - date.getTime()) / 1000);
   if (diffSeconds < 60) return "just now";
