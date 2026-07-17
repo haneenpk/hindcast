@@ -5,6 +5,7 @@ import {
 } from "@nestjs/common";
 import { ErrorSource, Prisma, prisma } from "@hindcast/db";
 import type { CapturedErrorInput, EventBatchInput } from "@hindcast/shared";
+import { UAParser } from "ua-parser-js";
 import { StorageService } from "../storage/storage.service";
 
 const SOURCE_MAP: Record<CapturedErrorInput["source"], ErrorSource> = {
@@ -62,6 +63,9 @@ export class EventsService {
     }
 
     if (!existing) {
+      // Parsed once here so the session list can filter by browser
+      // without ever touching the raw user-agent again.
+      const parsed = userAgent ? new UAParser(userAgent).getResult() : null;
       try {
         await prisma.session.create({
           data: {
@@ -71,6 +75,9 @@ export class EventsService {
             lastEventAt: lastActivityAt,
             entryUrl: batch.url.slice(0, 2048),
             userAgent: userAgent ? userAgent.slice(0, 512) : null,
+            browser: parsed?.browser.name ?? null,
+            os: parsed?.os.name ?? null,
+            durationMs: Math.max(0, lastActivityAt.getTime() - batch.startedAt),
             hasError: errors.length > 0,
           },
         });
@@ -79,8 +86,18 @@ export class EventsService {
         if (!isUniqueViolation(error)) throw error;
       }
     } else {
-      const data: { lastEventAt?: Date; hasError?: boolean } = {};
-      if (lastActivityAt > existing.lastEventAt) data.lastEventAt = lastActivityAt;
+      const data: {
+        lastEventAt?: Date;
+        durationMs?: number;
+        hasError?: boolean;
+      } = {};
+      if (lastActivityAt > existing.lastEventAt) {
+        data.lastEventAt = lastActivityAt;
+        data.durationMs = Math.max(
+          0,
+          lastActivityAt.getTime() - existing.startedAt.getTime(),
+        );
+      }
       if (errors.length > 0 && !existing.hasError) data.hasError = true;
       if (Object.keys(data).length > 0) {
         await prisma.session.update({ where: { id: existing.id }, data });

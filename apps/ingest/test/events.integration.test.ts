@@ -21,25 +21,36 @@ let server: ChildProcess;
 let key: string;
 let otherKey: string;
 
-function makeBatch(sessionId: string, seq: number, startedAt: number) {
+function makeBatch(
+  sessionId: string,
+  seq: number,
+  startedAt: number,
+  eventBase = startedAt,
+) {
   return {
     v: 1,
     key,
     sessionId,
     seq,
+    // startedAt stays constant across a session's batches, like the SDK
+    // sends it; eventBase moves with each flush.
     startedAt,
     url: "https://shop.example.com/checkout",
     events: [
-      { type: 2, data: { node: {} }, timestamp: startedAt },
-      { type: 3, data: { source: 2 }, timestamp: startedAt + 1500 },
-      { type: 3, data: { source: 2 }, timestamp: startedAt + 4200 },
+      { type: 2, data: { node: {} }, timestamp: eventBase },
+      { type: 3, data: { source: 2 }, timestamp: eventBase + 1500 },
+      { type: 3, data: { source: 2 }, timestamp: eventBase + 4200 },
     ],
   };
 }
 
+const CHROME_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
+
 async function post(body: unknown): Promise<Response> {
   return fetch(`${BASE}/v1/events`, {
     method: "POST",
+    headers: { "user-agent": CHROME_UA },
     body: JSON.stringify(body),
   });
 }
@@ -103,6 +114,9 @@ describe("POST /v1/events", () => {
     expect(session).not.toBeNull();
     expect(session?.entryUrl).toBe(batch.url);
     expect(session?.lastEventAt.getTime()).toBe(startedAt + 4200);
+    expect(session?.browser).toBe("Chrome");
+    expect(session?.os).toBe("Windows");
+    expect(session?.durationMs).toBe(4200);
     expect(session?.chunks).toHaveLength(1);
     expect(session?.chunks[0]?.eventCount).toBe(3);
     expect(session?.chunks[0]?.pageUrl).toBe(batch.url);
@@ -147,13 +161,14 @@ describe("POST /v1/events", () => {
     const sessionId = randomUUID();
     const startedAt = Date.now() - 60_000;
 
-    await post(makeBatch(sessionId, 1, startedAt + 30_000));
+    await post(makeBatch(sessionId, 1, startedAt, startedAt + 30_000));
     await post(makeBatch(sessionId, 0, startedAt)); // late, out of order
 
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
     });
     expect(session?.lastEventAt.getTime()).toBe(startedAt + 30_000 + 4200);
+    expect(session?.durationMs).toBe(30_000 + 4200);
   });
 
   it("rejects unknown project keys", async () => {
