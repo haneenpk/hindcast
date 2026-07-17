@@ -71,6 +71,9 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
+      ua-parser-js:
+        specifier: ^1.0.41
+        version: 1.0.41
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -84,6 +87,9 @@ importers:
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
+      '@types/ua-parser-js':
+        specifier: ^0.7.39
+        version: 0.7.39
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
