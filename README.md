@@ -101,6 +101,8 @@ url, status, duration; never bodies — including requests that got no
 answer at all. Errors and failed requests sit on the player's timeline
 as markers, and console and network lanes under the player carry the
 detail — click a row for the full stack or request, then jump the
-replay to that moment. Fernwood, the demo shop, generates believable
-sessions with believable failures. Next: filters and search on the
-session list.
+replay to that moment. The session list filters by errors, device, page
+and duration, searches across ids and urls, and paginates — every
+filtered view is a shareable link. Fernwood, the demo shop, generates
+believable sessions with believable failures. Next: the player chrome
+grows up — speeds and skip-inactivity.
