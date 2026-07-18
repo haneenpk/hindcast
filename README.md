@@ -104,5 +104,7 @@ detail — click a row for the full stack or request, then jump the
 replay to that moment. The session list filters by errors, device, page
 and duration, searches across ids and urls, and paginates — every
 filtered view is a shareable link. Fernwood, the demo shop, generates
-believable sessions with believable failures. Next: the player chrome
-grows up — speeds and skip-inactivity.
+believable sessions with believable failures. The player behaves like a
+real video player: 1×/2×/4×, skip-idle, a scrubber with markers riding
+the track, space and arrow keys, click the footage to pause. Next: the
+"report a bug" button in the SDK.
