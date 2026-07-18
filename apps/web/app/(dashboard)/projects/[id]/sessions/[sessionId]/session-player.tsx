@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatClock } from "@/lib/format";
+import { Scrubber } from "./scrubber";
 import { SessionLanes } from "./session-lanes";
 import type { ConsoleEntry, NetworkEntry } from "./session-lanes";
 import "@rrweb/replay/dist/style.css";
@@ -11,12 +12,14 @@ import "@rrweb/replay/dist/style.css";
 // mounted through it render an empty shell. The engine itself is fine.
 
 type PlayerState = "loading" | "empty" | "error" | "ready";
+type Speed = 1 | 2 | 4;
 
 interface ReplayerLike {
   play(offsetMs?: number): void;
   pause(offsetMs?: number): void;
   getCurrentTime(): number;
   getMetaData(): { startTime: number; totalTime: number };
+  setConfig(config: { speed?: number; skipInactive?: boolean }): void;
   on(event: string, handler: () => void): void;
 }
 
@@ -32,6 +35,8 @@ export interface TimelineMarker {
   label: string;
 }
 
+const NEXT_SPEED: Record<Speed, Speed> = { 1: 2, 2: 4, 4: 1 };
+
 export function SessionPlayer({
   sessionId,
   markers = [],
@@ -46,12 +51,16 @@ export function SessionPlayer({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const replayerRef = useRef<ReplayerLike | null>(null);
+  const scrubbingRef = useRef(false);
   const [state, setState] = useState<PlayerState>("loading");
   const [playing, setPlaying] = useState(false);
   const [finished, setFinished] = useState(false);
   const [timeMs, setTimeMs] = useState(0);
   const [totalMs, setTotalMs] = useState(0);
   const [startTime, setStartTime] = useState(0);
+  const [speed, setSpeed] = useState<Speed>(1);
+  const [skipInactive, setSkipInactive] = useState(false);
+  const [skipping, setSkipping] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,10 +120,12 @@ export function SessionPlayer({
           setPlaying(false);
           setFinished(true);
         });
+        replayer.on("skip-start", () => setSkipping(true));
+        replayer.on("skip-end", () => setSkipping(false));
 
         const tick = () => {
           const current = replayerRef.current;
-          if (current) {
+          if (current && !scrubbingRef.current) {
             setTimeMs((previous) => {
               const now = current.getCurrentTime();
               return Number.isFinite(now) ? Math.max(0, now) : previous;
@@ -163,14 +174,73 @@ export function SessionPlayer({
   const seek = (ms: number) => {
     const replayer = replayerRef.current;
     if (!replayer) return;
+    const clamped = Math.min(Math.max(ms, 0), totalMs);
     if (playing) {
-      replayer.play(ms);
+      replayer.play(clamped);
     } else {
-      replayer.pause(ms);
+      replayer.pause(clamped);
     }
     setFinished(false);
-    setTimeMs(ms);
+    setTimeMs(clamped);
   };
+
+  const cycleSpeed = () => {
+    const replayer = replayerRef.current;
+    if (!replayer) return;
+    const next = NEXT_SPEED[speed];
+    setSpeed(next);
+    replayer.setConfig({ speed: next });
+    // A running timer keeps its old speed; restart it from here.
+    if (playing) replayer.play(replayer.getCurrentTime());
+  };
+
+  const toggleSkipInactive = () => {
+    const replayer = replayerRef.current;
+    if (!replayer) return;
+    const next = !skipInactive;
+    setSkipInactive(next);
+    replayer.setConfig({ skipInactive: next });
+    if (playing) replayer.play(replayer.getCurrentTime());
+  };
+
+  // Keyboard transport, kept fresh via a ref so listeners never go stale.
+  const transportRef = useRef({ toggle, seek, timeMs });
+  transportRef.current = { toggle, seek, timeMs };
+
+  useEffect(() => {
+    if (state !== "ready") return;
+    const onKey = (event: KeyboardEvent): void => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, select, textarea, [contenteditable], aside")) {
+        return;
+      }
+      if (event.code === "Space") {
+        event.preventDefault();
+        transportRef.current.toggle();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        transportRef.current.seek(transportRef.current.timeMs - 5000);
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        transportRef.current.seek(transportRef.current.timeMs + 5000);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [state]);
+
+  const scrubberMarkers =
+    totalMs > 0
+      ? markers.map((marker) => ({
+          id: marker.id,
+          kind: marker.kind,
+          label: marker.label,
+          offsetMs: Math.min(
+            Math.max(marker.timestamp - startTime, 0),
+            totalMs,
+          ),
+        }))
+      : [];
 
   return (
     <div ref={wrapperRef}>
@@ -191,16 +261,25 @@ export function SessionPlayer({
       ) : null}
 
       <div className={state === "ready" ? "" : "invisible h-0 overflow-hidden"}>
-        <div
-          ref={stageRef}
-          className="session-stage overflow-hidden rounded-t-lg border border-b-0 border-edge bg-surface"
-        />
+        <div className="relative">
+          <div
+            ref={stageRef}
+            onClick={toggle}
+            className="session-stage cursor-pointer overflow-hidden rounded-t-lg border border-b-0 border-edge bg-surface"
+          />
+          {skipping ? (
+            <span className="text-amber absolute top-2.5 right-2.5 rounded bg-black/70 px-2 py-0.5 text-[11px] tracking-wide uppercase">
+              skipping idle
+            </span>
+          ) : null}
+        </div>
+
         <div className="flex items-center gap-3 rounded-b-lg border border-edge bg-surface px-3 py-2">
           <button
             type="button"
             onClick={toggle}
             aria-label={playing ? "Pause" : "Play"}
-            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-raised"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-raised"
           >
             {playing ? (
               <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
@@ -213,44 +292,49 @@ export function SessionPlayer({
               </svg>
             )}
           </button>
-          <span className="text-muted w-12 text-right font-mono text-xs tabular-nums">
+
+          <span className="text-muted w-12 shrink-0 text-right font-mono text-xs tabular-nums">
             {formatClock(Math.min(timeMs, totalMs))}
           </span>
-          <div className="relative flex h-7 min-w-0 flex-1 items-end">
-            {totalMs > 0
-              ? markers.map((marker) => {
-                  const offset = Math.min(
-                    Math.max(marker.timestamp - startTime, 0),
-                    totalMs,
-                  );
-                  return (
-                    <button
-                      key={marker.id}
-                      type="button"
-                      onClick={() => seek(offset)}
-                      title={`${formatClock(offset)} · ${marker.label}`}
-                      aria-label={`Jump to ${marker.kind} at ${formatClock(offset)}`}
-                      className={`absolute top-0.5 h-2 w-0.75 -translate-x-1/2 rounded-full transition-[height] hover:h-3 ${
-                        marker.kind === "error" ? "bg-red" : "bg-amber"
-                      }`}
-                      style={{ left: `${(offset / totalMs) * 100}%` }}
-                    />
-                  );
-                })
-              : null}
-            <input
-              type="range"
-              min={0}
-              max={Math.max(totalMs, 1)}
-              value={Math.min(timeMs, totalMs)}
-              onChange={(event) => seek(Number(event.target.value))}
-              className="accent-amber mb-1 h-1 w-full"
-              aria-label="Seek"
-            />
-          </div>
-          <span className="text-faint w-12 font-mono text-xs tabular-nums">
+
+          <Scrubber
+            timeMs={timeMs}
+            totalMs={totalMs}
+            markers={scrubberMarkers}
+            onScrub={(ms) => setTimeMs(ms)}
+            onCommit={seek}
+            onDragChange={(dragging) => {
+              scrubbingRef.current = dragging;
+            }}
+          />
+
+          <span className="text-faint w-12 shrink-0 font-mono text-xs tabular-nums">
             {formatClock(totalMs)}
           </span>
+
+          <button
+            type="button"
+            onClick={cycleSpeed}
+            aria-label={`Playback speed ${speed}x`}
+            title="Playback speed"
+            className="text-muted w-8 shrink-0 rounded-md px-1 py-1 text-center font-mono text-xs transition-colors hover:bg-raised hover:text-fg"
+          >
+            {speed}×
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleSkipInactive}
+            aria-pressed={skipInactive}
+            title="Fast-forward through idle stretches"
+            className={`shrink-0 rounded-md border px-2 py-1 text-[11px] tracking-wide uppercase transition-colors ${
+              skipInactive
+                ? "border-amber/50 text-amber"
+                : "border-edge text-muted hover:text-fg"
+            }`}
+          >
+            skip idle
+          </button>
         </div>
 
         <SessionLanes
