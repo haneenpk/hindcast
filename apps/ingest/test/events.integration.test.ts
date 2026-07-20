@@ -275,6 +275,77 @@ describe("POST /v1/events", () => {
     expect(chunks).toBe(1); // no chunk row for the eventless batch
   });
 
+  it("flags an existing session when the visitor reports it", async () => {
+    const sessionId = randomUUID();
+    await post(makeBatch(sessionId, 0, Date.now() - 5000));
+
+    const response = await fetch(`${BASE}/v1/reports`, {
+      method: "POST",
+      headers: { "user-agent": CHROME_UA },
+      body: JSON.stringify({
+        v: 1,
+        key,
+        sessionId,
+        startedAt: Date.now() - 5000,
+        url: "https://shop.example.com/checkout",
+        comment: "  the coupon button crashed the page  ",
+      }),
+    });
+    expect(response.status).toBe(202);
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    expect(session?.reportedAt).not.toBeNull();
+    expect(session?.reportComment).toBe("the coupon button crashed the page");
+  });
+
+  it("creates a session shell when the report beats the first batch", async () => {
+    const sessionId = randomUUID();
+    const startedAt = Date.now() - 2000;
+
+    const response = await fetch(`${BASE}/v1/reports`, {
+      method: "POST",
+      headers: { "user-agent": CHROME_UA },
+      body: JSON.stringify({
+        v: 1,
+        key,
+        sessionId,
+        startedAt,
+        url: "https://shop.example.com/cart",
+      }),
+    });
+    expect(response.status).toBe(202);
+
+    const shell = await prisma.session.findUnique({ where: { id: sessionId } });
+    expect(shell?.reportedAt).not.toBeNull();
+    expect(shell?.reportComment).toBeNull();
+    expect(shell?.browser).toBe("Chrome");
+
+    // the late batch fills the shell in rather than failing
+    expect((await post(makeBatch(sessionId, 0, startedAt))).status).toBe(202);
+    const filled = await prisma.session.findUnique({ where: { id: sessionId } });
+    expect(filled?.durationMs).toBe(4200);
+    expect(filled?.reportedAt).not.toBeNull();
+  });
+
+  it("refuses reports against another project's session", async () => {
+    const sessionId = randomUUID();
+    await post(makeBatch(sessionId, 0, Date.now() - 5000));
+
+    const response = await fetch(`${BASE}/v1/reports`, {
+      method: "POST",
+      body: JSON.stringify({
+        v: 1,
+        key: otherKey,
+        sessionId,
+        startedAt: Date.now(),
+        url: "https://shop.example.com/",
+      }),
+    });
+    expect(response.status).toBe(403);
+  });
+
   it("rejects a batch with neither events nor errors", async () => {
     const empty = { ...makeBatch(randomUUID(), 0, Date.now()), events: [] };
     expect((await post(empty)).status).toBe(400);

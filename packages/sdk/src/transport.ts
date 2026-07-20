@@ -1,5 +1,5 @@
 import type { ResolvedConfig } from "./config";
-import type { EventBatch } from "./types";
+import type { EventBatch, SessionReport } from "./types";
 
 /**
  * Batches travel as text/plain JSON on purpose: an application/json body
@@ -46,5 +46,26 @@ export function sendBatch(
     });
   } catch {
     /* fetch itself missing or blocked — nothing sensible left to try */
+  }
+}
+
+export function sendReport(config: ResolvedConfig, report: SessionReport): void {
+  let body: string;
+  try {
+    body = JSON.stringify(report);
+  } catch {
+    return;
+  }
+  try {
+    void fetch(`${config.endpoint}/v1/reports`, {
+      method: "POST",
+      body,
+      credentials: "omit",
+      keepalive: true,
+    }).catch(() => {
+      /* the widget already said thanks; retrying would be dishonest */
+    });
+  } catch {
+    /* nothing sensible left to try */
   }
 }

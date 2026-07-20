@@ -9,6 +9,8 @@ export interface HindcastConfig {
   enabled?: boolean;
   /** console.debug output while integrating. Leave off in production. */
   debug?: boolean;
+  /** Renders the floating "report a bug" button. Off by default. */
+  reportButton?: boolean;
 }
 
 export interface ResolvedConfig {
@@ -16,6 +18,7 @@ export interface ResolvedConfig {
   endpoint: string;
   flushIntervalMs: number;
   debug: boolean;
+  reportButton: boolean;
 }
 
 export function resolveConfig(config: HindcastConfig): ResolvedConfig | null {
@@ -30,6 +33,7 @@ export function resolveConfig(config: HindcastConfig): ResolvedConfig | null {
       endpoint: config.endpoint.replace(/\/+$/, ""),
       flushIntervalMs: Math.max(1000, config.flushIntervalMs ?? 5000),
       debug: config.debug === true,
+      reportButton: config.reportButton === true,
     };
   } catch {
     return null;
