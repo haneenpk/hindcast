@@ -34,3 +34,12 @@ export interface EventBatch {
   errors?: CapturedError[];
   network?: CapturedRequest[];
 }
+
+export interface SessionReport {
+  v: 1;
+  key: string;
+  sessionId: string;
+  startedAt: number;
+  url: string;
+  comment?: string;
+}

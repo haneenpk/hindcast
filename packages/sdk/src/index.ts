@@ -5,13 +5,16 @@ import { ErrorCapture } from "./errors";
 import { NetworkCapture } from "./network";
 import { startRecorder } from "./recorder";
 import { openSession } from "./session";
-import { sendBatch } from "./transport";
+import { sendBatch, sendReport } from "./transport";
 import type { EventBatch } from "./types";
+import { createReportWidget } from "./widget";
+import type { ReportWidget } from "./widget";
 
 interface ActiveRecording {
   stopRecorder(): void;
   errorCapture: ErrorCapture;
   networkCapture: NetworkCapture;
+  widget: ReportWidget | null;
   flushTimer: number;
   onVisibilityChange(): void;
   onPageHide(): void;
@@ -19,6 +22,7 @@ interface ActiveRecording {
 }
 
 let active: ActiveRecording | null = null;
+let activeReporter: ((comment?: string) => void) | null = null;
 
 /**
  * Everything below is wrapped: whatever breaks inside the SDK, the host
@@ -88,11 +92,55 @@ export function init(config: HindcastConfig): void {
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("pagehide", onPageHide);
 
+    const submitReport = (comment?: string): void => {
+      try {
+        flush(false); // the story so far should arrive with the flag
+        sendReport(resolved, {
+          v: 1,
+          key: resolved.key,
+          sessionId: session.id,
+          startedAt: session.startedAt,
+          url: window.location.href,
+          comment: comment?.trim() || undefined,
+        });
+        debugLog(resolved, "session reported");
+      } catch {
+        /* a lost report must not take the page with it */
+      }
+    };
+    activeReporter = submitReport;
+
+    let widget: ReportWidget | null = null;
+    if (resolved.reportButton) {
+      widget = createReportWidget({
+        onSubmit: (comment) => submitReport(comment),
+      });
+      if (widget) {
+        const element = widget.element;
+        if (document.body) {
+          document.body.appendChild(element);
+        } else {
+          document.addEventListener(
+            "DOMContentLoaded",
+            () => {
+              try {
+                document.body?.appendChild(element);
+              } catch {
+                /* no body, no button */
+              }
+            },
+            { once: true },
+          );
+        }
+      }
+    }
+
     debugLog(resolved, "recording session", session.id);
     active = {
       stopRecorder,
       errorCapture,
       networkCapture,
+      widget,
       flushTimer,
       onVisibilityChange,
       onPageHide,
@@ -100,6 +148,19 @@ export function init(config: HindcastConfig): void {
     };
   } catch {
     active = null;
+    activeReporter = null;
+  }
+}
+
+/**
+ * Flags the current session, with the visitor's words if given. Safe to
+ * call any time — before init() or after stop() it does nothing.
+ */
+export function report(comment?: string): void {
+  try {
+    activeReporter?.(comment);
+  } catch {
+    /* never the host page's problem */
   }
 }
 
@@ -109,12 +170,14 @@ export function stop(): void {
     if (!active) return;
     const current = active;
     active = null;
+    activeReporter = null;
     window.clearInterval(current.flushTimer);
     document.removeEventListener("visibilitychange", current.onVisibilityChange);
     window.removeEventListener("pagehide", current.onPageHide);
     current.stopRecorder();
     current.errorCapture.stop();
     current.networkCapture.stop();
+    current.widget?.destroy();
     current.flush(false);
   } catch {
     /* even teardown stays silent */

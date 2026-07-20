@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { init, stop } from "./index";
+import { init, report, stop } from "./index";
 
 // The one promise the SDK makes to host pages: calling it can never throw.
 describe("init", () => {
@@ -18,5 +18,10 @@ describe("init", () => {
   it("stop() is safe to call without a running recorder", () => {
     expect(() => stop()).not.toThrow();
     expect(() => stop()).not.toThrow();
+  });
+
+  it("report() before init is a silent no-op", () => {
+    expect(() => report()).not.toThrow();
+    expect(() => report("nothing is running yet")).not.toThrow();
   });
 });
