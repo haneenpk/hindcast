@@ -51,7 +51,19 @@ export const eventBatchSchema = z
     { message: "batch carries no events, errors or requests" },
   );
 
+// Fired when the visitor presses "report a bug". Carries enough to
+// create the session shell if the report races the first event batch.
+export const sessionReportSchema = z.object({
+  v: z.literal(1),
+  key: z.string().min(1).max(128),
+  sessionId: z.uuid(),
+  startedAt: z.number().int().positive(),
+  url: z.string().min(1).max(2048),
+  comment: z.string().max(2000).optional(),
+});
+
 export type RecordedEventInput = z.infer<typeof recordedEventSchema>;
 export type CapturedErrorInput = z.infer<typeof capturedErrorSchema>;
 export type CapturedRequestInput = z.infer<typeof capturedRequestSchema>;
 export type EventBatchInput = z.infer<typeof eventBatchSchema>;
+export type SessionReportInput = z.infer<typeof sessionReportSchema>;

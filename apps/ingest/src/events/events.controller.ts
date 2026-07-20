@@ -6,7 +6,7 @@ import {
   HttpCode,
   Post,
 } from "@nestjs/common";
-import { eventBatchSchema } from "@hindcast/shared";
+import { eventBatchSchema, sessionReportSchema } from "@hindcast/shared";
 import { EventsService } from "./events.service";
 
 @Controller("v1")
@@ -22,6 +22,18 @@ export class EventsController {
     const parsed = eventBatchSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException("malformed batch");
     await this.events.ingest(parsed.data, userAgent);
+    return { accepted: true };
+  }
+
+  @Post("reports")
+  @HttpCode(202)
+  async report(
+    @Body() body: unknown,
+    @Headers("user-agent") userAgent: string | undefined,
+  ): Promise<{ accepted: true }> {
+    const parsed = sessionReportSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException("malformed report");
+    await this.events.report(parsed.data, userAgent);
     return { accepted: true };
   }
 }

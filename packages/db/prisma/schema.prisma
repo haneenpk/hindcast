@@ -20,20 +20,24 @@ model Project {
 model Session {
   // Minted by the SDK in the browser, not by the database — events are
   // batched client-side before the server has ever heard of the session.
-  id          String   @id
-  projectId   String
-  startedAt   DateTime
-  lastEventAt DateTime
-  entryUrl    String?
-  userAgent   String?
+  id            String    @id
+  projectId     String
+  startedAt     DateTime
+  lastEventAt   DateTime
+  entryUrl      String?
+  userAgent     String?
   // Parsed once at ingest and duration kept as a column: the list filters
   // by browser and length, and neither survives as a WHERE clause against
   // a raw user-agent string or two timestamps.
-  browser     String?
-  os          String?
-  durationMs  Int      @default(0)
-  hasError    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  browser       String?
+  os            String?
+  durationMs    Int       @default(0)
+  hasError      Boolean   @default(false)
+  // Set when the visitor pressed "report a bug" — their own words beat
+  // any heuristic for which sessions deserve watching.
+  reportedAt    DateTime?
+  reportComment String?
+  createdAt     DateTime  @default(now())
 
   project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   chunks  EventChunk[]

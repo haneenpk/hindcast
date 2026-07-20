@@ -4,7 +4,11 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { ErrorSource, Prisma, prisma } from "@hindcast/db";
-import type { CapturedErrorInput, EventBatchInput } from "@hindcast/shared";
+import type {
+  CapturedErrorInput,
+  EventBatchInput,
+  SessionReportInput,
+} from "@hindcast/shared";
 import { UAParser } from "ua-parser-js";
 import { StorageService } from "../storage/storage.service";
 
@@ -179,6 +183,56 @@ export class EventsService {
         })),
       });
     }
+  }
+
+  async report(
+    payload: SessionReportInput,
+    userAgent: string | undefined,
+  ): Promise<void> {
+    const project = await prisma.project.findUnique({
+      where: { key: payload.key },
+    });
+    if (!project) throw new UnauthorizedException("unknown project key");
+
+    const existing = await prisma.session.findUnique({
+      where: { id: payload.sessionId },
+    });
+    if (existing && existing.projectId !== project.id) {
+      throw new ForbiddenException();
+    }
+
+    const comment = payload.comment?.trim() || null;
+
+    if (!existing) {
+      // The report can race the session's first batch; create the shell
+      // so the flag never gets lost. The batch fills the rest in later.
+      const parsed = userAgent ? new UAParser(userAgent).getResult() : null;
+      try {
+        await prisma.session.create({
+          data: {
+            id: payload.sessionId,
+            projectId: project.id,
+            startedAt: new Date(payload.startedAt),
+            lastEventAt: new Date(payload.startedAt),
+            entryUrl: payload.url.slice(0, 2048),
+            userAgent: userAgent ? userAgent.slice(0, 512) : null,
+            browser: parsed?.browser.name ?? null,
+            os: parsed?.os.name ?? null,
+            reportedAt: new Date(),
+            reportComment: comment,
+          },
+        });
+        return;
+      } catch (error) {
+        if (!isUniqueViolation(error)) throw error;
+        // lost the race — fall through to the update below
+      }
+    }
+
+    await prisma.session.update({
+      where: { id: payload.sessionId },
+      data: { reportedAt: new Date(), reportComment: comment },
+    });
   }
 }
 
