@@ -37,8 +37,8 @@ Sessions never leave your infrastructure.
     apps/web         dashboard + replay player
     apps/demo        small storefront with planted bugs, the demo stage
 
-The recorder, the shared wire schema, the ingest API and the metadata
-store exist so far; the dashboard and demo shop are still to come.
+All of it exists and runs; the remaining work is hardening, polish and
+packaging.
 
 ## Running locally
 
@@ -103,8 +103,12 @@ as markers, and console and network lanes under the player carry the
 detail — click a row for the full stack or request, then jump the
 replay to that moment. The session list filters by errors, device, page
 and duration, searches across ids and urls, and paginates — every
-filtered view is a shareable link. Fernwood, the demo shop, generates
-believable sessions with believable failures. The player behaves like a
-real video player: 1×/2×/4×, skip-idle, a scrubber with markers riding
-the track, space and arrow keys, click the footage to pause. Next: the
-"report a bug" button in the SDK.
+filtered view is a shareable link. The player behaves like a real video
+player: 1×/2×/4×, skip-idle, a scrubber with markers riding the track,
+space and arrow keys, click the footage to pause. Sites can wear a
+floating "report a bug" button (or call `report()` directly), so
+sessions arrive flagged with the visitor's own words — an amber dot in
+the list, the comment above the player. Fernwood, the demo shop,
+generates believable sessions with believable failures. Next: the
+masking hardening pass, with the test suite the privacy guarantee
+deserves.
