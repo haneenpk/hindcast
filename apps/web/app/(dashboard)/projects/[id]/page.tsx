@@ -50,11 +50,13 @@ export default async function ProjectSessionsPage({
   const device = sp.device || undefined;
   const dur = sp.dur;
   const errorsOnly = sp.errors === "1";
+  const reportedOnly = sp.reported === "1";
   const page = Math.max(1, Number(sp.p) || 1);
-  const filtered = Boolean(q || device || dur || errorsOnly);
+  const filtered = Boolean(q || device || dur || errorsOnly || reportedOnly);
 
   const where: Prisma.SessionWhereInput = { projectId: project.id };
   if (errorsOnly) where.hasError = true;
+  if (reportedOnly) where.reportedAt = { not: null };
   if (device) where.browser = device;
   if (dur === "short") where.durationMs = { lt: 60_000 };
   if (dur === "medium") where.durationMs = { gte: 60_000, lt: 300_000 };
@@ -103,6 +105,7 @@ export default async function ProjectSessionsPage({
     if (device) next.set("device", device);
     if (dur) next.set("dur", dur);
     if (errorsOnly) next.set("errors", "1");
+    if (reportedOnly) next.set("reported", "1");
     if (n > 1) next.set("p", String(n));
     const query = next.toString();
     return query ? `/projects/${project.id}?${query}` : `/projects/${project.id}`;
@@ -161,6 +164,12 @@ export default async function ProjectSessionsPage({
                         <span
                           className="bg-red h-1.5 w-1.5 shrink-0 rounded-full"
                           title="Session captured errors"
+                        />
+                      ) : null}
+                      {session.reportedAt ? (
+                        <span
+                          className="bg-amber h-1.5 w-1.5 shrink-0 rounded-full"
+                          title="Reported by the visitor"
                         />
                       ) : null}
                       <span className="truncate">

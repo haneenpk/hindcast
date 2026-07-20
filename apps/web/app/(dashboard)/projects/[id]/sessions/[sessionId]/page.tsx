@@ -111,6 +111,21 @@ export default async function SessionPage({ params }: Props) {
         </p>
       </div>
 
+      {session.reportedAt ? (
+        <div className="border-amber/40 mb-4 rounded-lg border-l-2 bg-surface px-4 py-3">
+          <p className="text-amber text-[11px] font-medium tracking-wide uppercase">
+            Reported by the visitor · {formatRelative(session.reportedAt)}
+          </p>
+          {session.reportComment ? (
+            <p className="mt-1 text-[13px] leading-relaxed">
+              “{session.reportComment}”
+            </p>
+          ) : (
+            <p className="text-muted mt-1 text-[13px]">No comment left.</p>
+          )}
+        </div>
+      ) : null}
+
       <SessionPlayer
         sessionId={session.id}
         markers={markers}

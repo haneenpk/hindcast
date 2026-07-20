@@ -13,6 +13,7 @@ init({
   key: import.meta.env.VITE_HINDCAST_KEY ?? "",
   endpoint: import.meta.env.VITE_HINDCAST_ENDPOINT ?? "",
   debug: import.meta.env.DEV,
+  reportButton: true,
 });
 
 createRoot(document.getElementById("root")!).render(

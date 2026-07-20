@@ -14,6 +14,7 @@ export function SessionFilters({ devices }: { devices: string[] }) {
   const device = params.get("device") ?? "";
   const dur = params.get("dur") ?? "";
   const errorsOnly = params.get("errors") === "1";
+  const reportedOnly = params.get("reported") === "1";
 
   const apply = (patch: Record<string, string | null>): void => {
     const next = new URLSearchParams(params);
@@ -26,7 +27,7 @@ export function SessionFilters({ devices }: { devices: string[] }) {
     router.push(query ? `${pathname}?${query}` : pathname);
   };
 
-  const anyActive = Boolean(q || device || dur || errorsOnly);
+  const anyActive = Boolean(q || device || dur || errorsOnly || reportedOnly);
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -84,6 +85,20 @@ export function SessionFilters({ devices }: { devices: string[] }) {
       >
         <span className="bg-red h-1.5 w-1.5 rounded-full" />
         Errors only
+      </button>
+
+      <button
+        type="button"
+        onClick={() => apply({ reported: reportedOnly ? null : "1" })}
+        aria-pressed={reportedOnly}
+        className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[13px] transition-colors ${
+          reportedOnly
+            ? "border-amber/50 text-fg"
+            : "border-edge text-muted hover:text-fg"
+        }`}
+      >
+        <span className="bg-amber h-1.5 w-1.5 rounded-full" />
+        Reported
       </button>
 
       {anyActive ? (
