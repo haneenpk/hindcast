@@ -11,6 +11,14 @@ export interface HindcastConfig {
   debug?: boolean;
   /** Renders the floating "report a bug" button. Off by default. */
   reportButton?: boolean;
+  privacy?: {
+    /**
+     * Selectors whose inputs record their real text instead of asterisks.
+     * Password and card fields ignore this list — they are never
+     * unmaskable.
+     */
+    unmask?: string[];
+  };
 }
 
 export interface ResolvedConfig {
@@ -19,6 +27,7 @@ export interface ResolvedConfig {
   flushIntervalMs: number;
   debug: boolean;
   reportButton: boolean;
+  unmaskSelectors: string[];
 }
 
 export function resolveConfig(config: HindcastConfig): ResolvedConfig | null {
@@ -34,6 +43,11 @@ export function resolveConfig(config: HindcastConfig): ResolvedConfig | null {
       flushIntervalMs: Math.max(1000, config.flushIntervalMs ?? 5000),
       debug: config.debug === true,
       reportButton: config.reportButton === true,
+      unmaskSelectors: Array.isArray(config.privacy?.unmask)
+        ? config.privacy.unmask.filter(
+            (selector): selector is string => typeof selector === "string",
+          )
+        : [],
     };
   } catch {
     return null;

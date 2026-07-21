@@ -74,9 +74,12 @@ export function init(config: HindcastConfig): void {
       }
     };
 
-    const stopRecorder = startRecorder((event) => {
-      if (buffer.push(event)) flush(false);
-    });
+    const stopRecorder = startRecorder(
+      (event) => {
+        if (buffer.push(event)) flush(false);
+      },
+      { unmaskSelectors: resolved.unmaskSelectors },
+    );
     if (!stopRecorder) return;
     errorCapture.start();
     networkCapture.start();
