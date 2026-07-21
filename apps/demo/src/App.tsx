@@ -43,12 +43,15 @@ export function App() {
         >
           <label htmlFor="newsletter-email">New pieces, twice a month</label>
           <div className="newsletter-row">
+            {/* data-private: the whole field records as a placeholder
+                block — not even masked keystrokes reach the replay */}
             <input
               id="newsletter-email"
               name="email"
               type="email"
               required
               placeholder="you@example.com"
+              data-private=""
             />
             <button type="submit">Sign up</button>
           </div>
