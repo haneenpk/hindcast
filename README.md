@@ -18,8 +18,12 @@ Sessions never leave your infrastructure.
    technique — events, not pixels), buffers them in memory, and flushes
    every ~5 seconds plus once more on page unload via `sendBeacon`.
 2. **Mask.** Inputs are masked in the visitor's browser before anything
-   goes on the wire. Password and card fields can never be unmasked.
-   What was never captured can't leak.
+   goes on the wire. Password and card fields can never be unmasked —
+   no allowlist, attribute or config reaches them, and their mask is
+   fixed-length so it can't leak how long a secret is. Mark any element
+   `data-private` and it records as a same-size placeholder block; opt
+   harmless fields out with `data-hc-unmask` or `privacy.unmask`
+   selectors. What was never captured can't leak.
 3. **Store.** The ingest API authenticates by project key, gzips event
    chunks into S3-compatible storage, and keeps only metadata in
    Postgres: sessions, errors, failed requests, and where each chunk
@@ -109,6 +113,8 @@ space and arrow keys, click the footage to pause. Sites can wear a
 floating "report a bug" button (or call `report()` directly), so
 sessions arrive flagged with the visitor's own words — an amber dot in
 the list, the comment above the player. Fernwood, the demo shop,
-generates believable sessions with believable failures. Next: the
-masking hardening pass, with the test suite the privacy guarantee
-deserves.
+generates believable sessions with believable failures. Masking is a
+tested system now — the never-unmaskable rules, the allowlist and the
+data-private blocks are pinned by unit tests, and a real-browser audit
+grepped the stored bytes for planted secrets. Next: retention jobs and
+storage stats.
