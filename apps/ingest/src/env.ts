@@ -9,6 +9,9 @@ const envSchema = z.object({
   S3_ACCESS_KEY: z.string().min(1),
   S3_SECRET_KEY: z.string().min(1),
   S3_BUCKET: z.string().min(1),
+  REDIS_URL: z.url().default("redis://localhost:6379"),
+  // How often the retention sweep runs, in minutes.
+  RETENTION_SWEEP_MINUTES: z.coerce.number().int().positive().default(60),
 });
 
 export const env = envSchema.parse(process.env);
