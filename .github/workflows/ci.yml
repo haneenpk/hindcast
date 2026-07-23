@@ -17,6 +17,7 @@ jobs:
       S3_ACCESS_KEY: hindcast
       S3_SECRET_KEY: hindcast-dev
       S3_BUCKET: hindcast-events
+      REDIS_URL: redis://localhost:6379
       ADMIN_SECRET: ci-only-never-production
       NEXT_PUBLIC_INGEST_URL: http://localhost:4100
 
@@ -31,6 +32,15 @@ jobs:
           - "5432:5432"
         options: >-
           --health-cmd "pg_isready -U hindcast -d hindcast"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10

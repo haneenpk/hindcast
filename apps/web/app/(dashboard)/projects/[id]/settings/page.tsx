@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { prisma } from "@hindcast/db";
 import { CopyButton } from "@/components/copy-button";
-import { formatDate } from "@/lib/format";
+import { formatBytes, formatDate, formatRelative } from "@/lib/format";
 import { getProject } from "@/lib/queries";
-import { renameProject } from "../../actions";
+import { renameProject, setRetention } from "../../actions";
 import { DeleteProject } from "../delete-project";
 
 export const metadata: Metadata = { title: "Settings" };
+
+const RETENTION_OPTIONS = [
+  { value: "7", label: "7 days" },
+  { value: "30", label: "30 days" },
+  { value: "90", label: "90 days" },
+  { value: "", label: "Keep forever" },
+];
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -16,6 +24,21 @@ export default async function ProjectSettingsPage({ params }: Props) {
   const { id } = await params;
   const project = await getProject(id);
   if (!project) notFound();
+
+  const [storage, oldest] = await Promise.all([
+    prisma.eventChunk.aggregate({
+      _sum: { sizeBytes: true },
+      where: { session: { projectId: project.id } },
+    }),
+    prisma.session.findFirst({
+      where: { projectId: project.id },
+      orderBy: { startedAt: "asc" },
+      select: { startedAt: true },
+    }),
+  ]);
+  const totalBytes = storage._sum.sizeBytes ?? 0;
+  const retentionValue =
+    project.retentionDays === null ? "" : String(project.retentionDays);
 
   const endpoint = process.env.NEXT_PUBLIC_INGEST_URL ?? "http://localhost:4100";
   const snippet = `import { init } from "@hindcast/sdk";
@@ -65,6 +88,56 @@ init({
             <dd className="text-[13px]">{formatDate(project.createdAt)}</dd>
           </div>
         </dl>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-3 text-[13px] font-medium">Storage &amp; retention</h2>
+        <div className="divide-y divide-edge rounded-lg border border-edge bg-surface">
+          <div className="flex items-center justify-between px-4 py-3">
+            <dt className="text-muted text-[13px]">Stored events</dt>
+            <dd className="font-mono text-xs tabular-nums">
+              {formatBytes(totalBytes)}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3">
+            <dt className="text-muted text-[13px]">Oldest session</dt>
+            <dd className="text-[13px]">
+              {oldest ? formatRelative(oldest.startedAt) : "—"}
+            </dd>
+          </div>
+          <form
+            action={setRetention}
+            className="flex items-center justify-between gap-2 px-4 py-3"
+          >
+            <div>
+              <p className="text-muted text-[13px]">Keep sessions for</p>
+              <p className="text-faint mt-0.5 text-[11px]">
+                Older sessions and their stored events are deleted on a
+                recurring sweep.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <input type="hidden" name="id" value={project.id} />
+              <select
+                name="retentionDays"
+                defaultValue={retentionValue}
+                className="rounded-md border border-edge bg-bg px-2.5 py-1.5 text-[13px] outline-none focus:border-edge-strong"
+              >
+                {RETENTION_OPTIONS.map((option) => (
+                  <option key={option.label} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="rounded-md border border-edge px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <section>

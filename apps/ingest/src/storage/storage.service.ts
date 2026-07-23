@@ -1,8 +1,15 @@
 import { promisify } from "node:util";
 import { gzip } from "node:zlib";
 import { Injectable } from "@nestjs/common";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectsCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { env } from "../env";
+
+// S3 DeleteObjects caps each request at 1000 keys.
+const DELETE_BATCH = 1000;
 
 const gzipAsync = promisify(gzip);
 
@@ -32,5 +39,20 @@ export class StorageService {
       }),
     );
     return body.byteLength;
+  }
+
+  /** Removes objects in batches. Deleting a missing key is a no-op, so
+   *  the retention sweep can safely re-run over a half-finished cleanup. */
+  async deleteObjects(keys: string[]): Promise<void> {
+    for (let i = 0; i < keys.length; i += DELETE_BATCH) {
+      const batch = keys.slice(i, i + DELETE_BATCH);
+      if (batch.length === 0) continue;
+      await this.client.send(
+        new DeleteObjectsCommand({
+          Bucket: env.S3_BUCKET,
+          Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true },
+        }),
+      );
+    }
   }
 }

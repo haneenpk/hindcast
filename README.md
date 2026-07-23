@@ -116,5 +116,8 @@ the list, the comment above the player. Fernwood, the demo shop,
 generates believable sessions with believable failures. Masking is a
 tested system now — the never-unmaskable rules, the allowlist and the
 data-private blocks are pinned by unit tests, and a real-browser audit
-grepped the stored bytes for planted secrets. Next: retention jobs and
-storage stats.
+grepped the stored bytes for planted secrets. Each project sets how long
+its sessions are kept; a BullMQ worker sweeps the expired ones — rows
+and stored objects alike — and the settings page shows the storage each
+project is using. Next: a home across all projects, then ingest
+hardening.

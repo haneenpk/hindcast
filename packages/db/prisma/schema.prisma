@@ -8,11 +8,14 @@ datasource db {
 }
 
 model Project {
-  id        String   @id @default(cuid())
-  name      String
-  key       String   @unique @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  key           String   @unique @default(cuid())
+  // How long recorded sessions are kept, in days. Null means keep them
+  // forever — the retention sweep skips the project entirely.
+  retentionDays Int?     @default(30)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   sessions Session[]
 }
