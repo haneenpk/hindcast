@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma, Prisma } from "@hindcast/db";
@@ -45,6 +46,22 @@ export async function setRetention(formData: FormData): Promise<void> {
     await prisma.project.update({
       where: { id: id.data },
       data: { retentionDays: raw === "" ? null : Number(raw) },
+    });
+  } catch (error) {
+    if (!isNotFound(error)) throw error;
+  }
+  revalidatePath(`/projects/${id.data}/settings`);
+}
+
+export async function rotateKey(formData: FormData): Promise<void> {
+  const id = projectId.safeParse(formData.get("id"));
+  if (!id.success) return;
+  try {
+    // The new key takes effect at once; the old one starts returning 401
+    // the moment this commits, which is the point of rotating.
+    await prisma.project.update({
+      where: { id: id.data },
+      data: { key: `hc_${randomUUID().replace(/-/g, "")}` },
     });
   } catch (error) {
     if (!isNotFound(error)) throw error;
