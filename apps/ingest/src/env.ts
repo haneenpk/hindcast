@@ -12,6 +12,12 @@ const envSchema = z.object({
   REDIS_URL: z.url().default("redis://localhost:6379"),
   // How often the retention sweep runs, in minutes.
   RETENTION_SWEEP_MINUTES: z.coerce.number().int().positive().default(60),
+  // Largest batch body accepted, in bytes. Anything larger is refused
+  // with a 413 before it touches storage.
+  MAX_BATCH_BYTES: z.coerce.number().int().positive().default(5_000_000),
+  // Accepted requests per project key per minute. A fixed window; over
+  // the limit gets a 429.
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(600),
 });
 
 export const env = envSchema.parse(process.env);
