@@ -6,6 +6,7 @@ import { formatBytes, formatDate, formatRelative } from "@/lib/format";
 import { getProject } from "@/lib/queries";
 import { renameProject, setRetention } from "../../actions";
 import { DeleteProject } from "../delete-project";
+import { RotateKey } from "../rotate-key";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -71,11 +72,18 @@ init({
         <h2 className="mb-3 text-[13px] font-medium">Details</h2>
         <dl className="divide-y divide-edge rounded-lg border border-edge bg-surface">
           <div className="flex items-center justify-between px-4 py-3">
-            <dt className="text-muted text-[13px]">Project key</dt>
-            <dd className="flex items-center gap-2">
-              <span className="font-mono text-xs">{project.key}</span>
+            <div>
+              <dt className="text-muted text-[13px]">Project key</dt>
+              <dd className="mt-0.5 font-mono text-xs">{project.key}</dd>
+              <p className="text-faint mt-1 text-[11px]">
+                Rotating issues a new key at once; update the snippet or the
+                old one starts returning 401.
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
               <CopyButton text={project.key} />
-            </dd>
+              <RotateKey projectId={project.id} />
+            </div>
           </div>
           <div className="flex items-center justify-between px-4 py-3">
             <dt className="text-muted text-[13px]">Sessions</dt>

@@ -121,5 +121,9 @@ its sessions are kept; a BullMQ worker sweeps the expired ones — rows
 and stored objects alike — and the settings page shows the storage each
 project is using. The projects home is a place to start the day: a
 cross-project feed of whatever broke or got reported most recently,
-above cards for every site. Next: ingest hardening — rate limits,
-payload caps, key rotation, CORS.
+above cards for every site. The ingest endpoint is hardened for the open
+internet: oversized bodies get a 413, each project key is rate-limited
+per minute (fail-open, so a Redis blip never drops recordings), keys
+rotate from settings, and CORS is open to all origins but credential-free
+by design. Next: the SDK production build — a single async-loaded
+`r.js`, SPA route tracking, and a bundle-size budget enforced in CI.

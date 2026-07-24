@@ -58,7 +58,14 @@ async function post(body: unknown): Promise<Response> {
 beforeAll(async () => {
   let bootLog = "";
   server = spawn(process.execPath, ["dist/main.js"], {
-    env: { ...process.env, PORT: String(PORT) },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      // Low enough that the hardening tests can trip them, high enough
+      // that the functional tests above never do.
+      RATE_LIMIT_PER_MINUTE: "50",
+      MAX_BATCH_BYTES: "100000",
+    },
     stdio: ["ignore", "pipe", "pipe"],
   });
   server.stdout?.on("data", (chunk: Buffer) => (bootLog += chunk.toString()));
@@ -428,5 +435,49 @@ describe("POST /v1/events", () => {
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
     expect(session?.lastEventAt.getTime()).toBe(lastAt);
     expect(session?.hasError).toBe(false); // failed requests are not errors
+  });
+});
+
+describe("hardening", () => {
+  it("rejects a body larger than the cap with a 413", async () => {
+    // Rate limiting keys on body.key, and this fires before parsing, so
+    // give it a fresh key to keep it off the shared budget.
+    const oversized = {
+      key: `big-${randomUUID()}`,
+      blob: "x".repeat(150_000), // over the 100000-byte test cap
+    };
+    const response = await fetch(`${BASE}/v1/events`, {
+      method: "POST",
+      body: JSON.stringify(oversized),
+    });
+    expect(response.status).toBe(413);
+  });
+
+  it("rate-limits a project key once it exceeds the window", async () => {
+    // The guard runs before validation, so a keyed-but-invalid body still
+    // counts against the limit — no sessions written to trip it.
+    const rlKey = `rl-${randomUUID()}`;
+    const body = JSON.stringify({ key: rlKey });
+
+    let firstStatus: number | null = null;
+    let hit429 = false;
+    let remainingHeader: string | null = null;
+    for (let i = 0; i < 60; i += 1) {
+      const response = await fetch(`${BASE}/v1/events`, {
+        method: "POST",
+        body,
+      });
+      if (firstStatus === null) firstStatus = response.status;
+      if (response.status === 429) {
+        hit429 = true;
+        remainingHeader = response.headers.get("retry-after");
+        break;
+      }
+    }
+
+    // Allowed by the limiter, rejected only by schema validation.
+    expect(firstStatus).toBe(400);
+    expect(hit429).toBe(true);
+    expect(Number(remainingHeader)).toBeGreaterThan(0);
   });
 });
