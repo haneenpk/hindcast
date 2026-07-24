@@ -119,5 +119,7 @@ data-private blocks are pinned by unit tests, and a real-browser audit
 grepped the stored bytes for planted secrets. Each project sets how long
 its sessions are kept; a BullMQ worker sweeps the expired ones — rows
 and stored objects alike — and the settings page shows the storage each
-project is using. Next: a home across all projects, then ingest
-hardening.
+project is using. The projects home is a place to start the day: a
+cross-project feed of whatever broke or got reported most recently,
+above cards for every site. Next: ingest hardening — rate limits,
+payload caps, key rotation, CORS.

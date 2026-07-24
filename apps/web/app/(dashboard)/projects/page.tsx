@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@hindcast/db";
-import { formatDate } from "@/lib/format";
+import { formatRelative } from "@/lib/format";
 import { createProject } from "./actions";
 
 export const metadata: Metadata = { title: "Projects" };
@@ -10,34 +10,49 @@ export const metadata: Metadata = { title: "Projects" };
 // that snapshot forever — projects created after the build never appear.
 export const dynamic = "force-dynamic";
 
+function entryPath(url: string | null): string {
+  if (!url) return "—";
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname + parsed.search;
+  } catch {
+    return url;
+  }
+}
+
+function CreateForm() {
+  return (
+    <form action={createProject} className="flex gap-2">
+      <input
+        name="name"
+        required
+        maxLength={64}
+        placeholder="Project name"
+        className="w-48 rounded-md border border-edge bg-surface px-3 py-1.5 text-[13px] outline-none placeholder:text-faint focus:border-edge-strong"
+      />
+      <button
+        type="submit"
+        className="rounded-md bg-white px-3 py-1.5 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
+      >
+        Create
+      </button>
+    </form>
+  );
+}
+
 export default async function ProjectsPage() {
   const projects = await prisma.project.findMany({
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { sessions: true } } },
   });
 
-  return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-base font-medium">Projects</h1>
-        <form action={createProject} className="flex gap-2">
-          <input
-            name="name"
-            required
-            maxLength={64}
-            placeholder="Project name"
-            className="w-48 rounded-md border border-edge bg-surface px-3 py-1.5 text-[13px] outline-none placeholder:text-faint focus:border-edge-strong"
-          />
-          <button
-            type="submit"
-            className="rounded-md bg-white px-3 py-1.5 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
-          >
-            Create
-          </button>
-        </form>
-      </div>
-
-      {projects.length === 0 ? (
+  if (projects.length === 0) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-base font-medium">Projects</h1>
+          <CreateForm />
+        </div>
         <div className="rounded-lg border border-edge bg-surface p-8">
           <p className="font-medium">No projects yet</p>
           <p className="text-muted mt-1 max-w-md text-[13px] leading-relaxed">
@@ -46,36 +61,136 @@ export default async function ProjectsPage() {
             appearing seconds after it ships.
           </p>
         </div>
-      ) : (
-        <ul className="divide-y divide-edge rounded-lg border border-edge bg-surface">
-          {projects.map((project) => (
-            <li key={project.id}>
+      </div>
+    );
+  }
+
+  const ids = projects.map((project) => project.id);
+  const [erroredRows, activityRows, attention] = await Promise.all([
+    prisma.session.groupBy({
+      by: ["projectId"],
+      where: { projectId: { in: ids }, hasError: true },
+      _count: { _all: true },
+    }),
+    prisma.session.groupBy({
+      by: ["projectId"],
+      where: { projectId: { in: ids } },
+      _max: { startedAt: true },
+    }),
+    // The cross-project feed: whatever broke or got reported most recently,
+    // wherever it happened — the first thing worth looking at each morning.
+    prisma.session.findMany({
+      where: {
+        projectId: { in: ids },
+        OR: [{ hasError: true }, { reportedAt: { not: null } }],
+      },
+      orderBy: { startedAt: "desc" },
+      take: 8,
+      include: { project: { select: { name: true } } },
+    }),
+  ]);
+
+  const erroredByProject = new Map(
+    erroredRows.map((row) => [row.projectId, row._count._all]),
+  );
+  const lastActiveByProject = new Map(
+    activityRows.map((row) => [row.projectId, row._max.startedAt]),
+  );
+
+  return (
+    <div className="mx-auto max-w-4xl">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-base font-medium">Projects</h1>
+        <CreateForm />
+      </div>
+
+      <section className="mb-8">
+        <h2 className="text-faint mb-2 text-[11px] font-medium tracking-wide uppercase">
+          Needs attention
+        </h2>
+        {attention.length === 0 ? (
+          <div className="rounded-lg border border-edge bg-surface px-4 py-5">
+            <p className="text-muted text-[13px]">
+              Nothing broken or reported across your projects. Quiet is good.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-edge rounded-lg border border-edge bg-surface">
+            {attention.map((session) => (
+              <li key={session.id}>
+                <Link
+                  href={`/projects/${session.projectId}/sessions/${session.id}`}
+                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised/50"
+                >
+                  <span className="flex shrink-0 items-center gap-1">
+                    {session.hasError ? (
+                      <span
+                        className="bg-red h-1.5 w-1.5 rounded-full"
+                        title="Captured errors"
+                      />
+                    ) : null}
+                    {session.reportedAt ? (
+                      <span
+                        className="bg-amber h-1.5 w-1.5 rounded-full"
+                        title="Reported by the visitor"
+                      />
+                    ) : null}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px]">
+                    {entryPath(session.entryUrl)}
+                  </span>
+                  <span className="text-muted shrink-0 truncate text-[13px]">
+                    {session.project.name}
+                  </span>
+                  <span className="text-faint shrink-0 text-right text-[13px] tabular-nums">
+                    {formatRelative(session.startedAt)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-faint mb-2 text-[11px] font-medium tracking-wide uppercase">
+          All projects
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {projects.map((project) => {
+            const errored = erroredByProject.get(project.id) ?? 0;
+            const lastActive = lastActiveByProject.get(project.id) ?? null;
+            return (
               <Link
+                key={project.id}
                 href={`/projects/${project.id}`}
-                className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-raised/50"
+                className="rounded-lg border border-edge bg-surface p-4 transition-colors hover:bg-raised/50"
               >
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">
-                    {project.name}
-                  </span>
-                  <span className="text-faint block truncate font-mono text-xs">
+                <div className="mb-3 min-w-0">
+                  <p className="truncate font-medium">{project.name}</p>
+                  <p className="text-faint truncate font-mono text-xs">
                     {project.key}
-                  </span>
-                </span>
-                <span className="flex shrink-0 items-center gap-6">
-                  <span className="text-muted text-[13px] tabular-nums">
+                  </p>
+                </div>
+                <div className="flex items-center gap-4 text-[13px]">
+                  <span className="text-muted tabular-nums">
                     {project._count.sessions}{" "}
                     {project._count.sessions === 1 ? "session" : "sessions"}
                   </span>
-                  <span className="text-faint text-[13px]">
-                    {formatDate(project.createdAt)}
+                  {errored > 0 ? (
+                    <span className="text-red tabular-nums">
+                      {errored} errored
+                    </span>
+                  ) : null}
+                  <span className="text-faint ml-auto">
+                    {lastActive ? formatRelative(lastActive) : "no activity"}
                   </span>
-                </span>
+                </div>
               </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
