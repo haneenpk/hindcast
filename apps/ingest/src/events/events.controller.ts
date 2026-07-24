@@ -5,11 +5,14 @@ import {
   Headers,
   HttpCode,
   Post,
+  UseGuards,
 } from "@nestjs/common";
 import { eventBatchSchema, sessionReportSchema } from "@hindcast/shared";
+import { RateLimitGuard } from "../security/rate-limit.guard";
 import { EventsService } from "./events.service";
 
 @Controller("v1")
+@UseGuards(RateLimitGuard)
 export class EventsController {
   constructor(private readonly events: EventsService) {}
 
