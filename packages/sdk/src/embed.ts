@@ -6,10 +6,11 @@ import { init, report, stop } from "./index";
 // bundler, no import. A tiny command queue also lets pages call
 // hindcast("report", "…") before the script has finished loading.
 
-function run(command: unknown, ...args: unknown[]): void {
+function run(args: unknown[]): void {
+  const [command, ...rest] = args;
   try {
-    if (command === "init") init(args[0] as HindcastConfig);
-    else if (command === "report") report(args[0] as string | undefined);
+    if (command === "init") init(rest[0] as HindcastConfig);
+    else if (command === "report") report(rest[0] as string | undefined);
     else if (command === "stop") stop();
   } catch {
     /* a bad command must never surface on the host page */
@@ -42,13 +43,13 @@ function configFromScript(): HindcastConfig | null {
         ? globalRef.hindcast.q
         : [];
 
-    globalRef.hindcast = (...args: unknown[]) => run(...args);
+    globalRef.hindcast = (...args: unknown[]) => run(args);
 
     const scriptConfig = configFromScript();
     if (scriptConfig) init(scriptConfig);
 
     for (const call of queued) {
-      run(...(call as unknown[]));
+      run(call as unknown[]);
     }
   } catch {
     /* if bootstrap can't run, the page carries on untouched */
