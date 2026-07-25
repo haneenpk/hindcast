@@ -14,9 +14,11 @@ Sessions never leave your infrastructure.
 
 ## How it works
 
-1. **Record.** One script tag captures DOM mutations (the rrweb
-   technique — events, not pixels), buffers them in memory, and flushes
-   every ~5 seconds plus once more on page unload via `sendBeacon`.
+1. **Record.** One async `<script>` tag loads a single ~60 KB (gzipped)
+   `r.js` that captures DOM mutations (the rrweb technique — events, not
+   pixels), buffers them in memory, and flushes every ~5 seconds plus
+   once more on page unload via `sendBeacon`. Single-page route changes
+   are tracked, so each page a visitor lands on is its own chunk.
 2. **Mask.** Inputs are masked in the visitor's browser before anything
    goes on the wire. Password and card fields can never be unmasked —
    no allowlist, attribute or config reaches them, and their mask is
@@ -125,5 +127,8 @@ above cards for every site. The ingest endpoint is hardened for the open
 internet: oversized bodies get a 413, each project key is rate-limited
 per minute (fail-open, so a Redis blip never drops recordings), keys
 rotate from settings, and CORS is open to all origins but credential-free
-by design. Next: the SDK production build — a single async-loaded
-`r.js`, SPA route tracking, and a bundle-size budget enforced in CI.
+by design. The SDK ships two ways — an npm package and a single
+self-contained `r.js` embed (rrweb bundled in, ~60 KB gzipped, under a
+budget CI enforces) — tracks SPA route changes, and never breaks the
+host page. Next: a seed script and demo mode with realistic sample
+sessions.

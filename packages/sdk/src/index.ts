@@ -4,6 +4,8 @@ import type { HindcastConfig } from "./config";
 import { ErrorCapture } from "./errors";
 import { NetworkCapture } from "./network";
 import { startRecorder } from "./recorder";
+import { trackRoutes } from "./route";
+import type { RouteTracker } from "./route";
 import { openSession } from "./session";
 import { sendBatch, sendReport } from "./transport";
 import type { EventBatch } from "./types";
@@ -14,6 +16,7 @@ interface ActiveRecording {
   stopRecorder(): void;
   errorCapture: ErrorCapture;
   networkCapture: NetworkCapture;
+  routeTracker: RouteTracker;
   widget: ReportWidget | null;
   flushTimer: number;
   onVisibilityChange(): void;
@@ -39,6 +42,11 @@ export function init(config: HindcastConfig): void {
     const buffer = new EventBuffer();
     const errorCapture = new ErrorCapture();
     const networkCapture = new NetworkCapture(resolved.endpoint);
+    // The page a chunk belongs to, tracked here rather than read at flush
+    // time: on an SPA navigation we flush the old page's events first,
+    // then advance this, so each chunk is labelled with the route it was
+    // actually recorded on.
+    let currentUrl = window.location.href;
 
     const flush = (unloading: boolean): void => {
       try {
@@ -53,7 +61,7 @@ export function init(config: HindcastConfig): void {
           sessionId: session.id,
           seq: session.nextSeq(),
           startedAt: session.startedAt,
-          url: window.location.href,
+          url: currentUrl,
           events,
         };
         if (errors.length > 0) batch.errors = errors;
@@ -95,6 +103,12 @@ export function init(config: HindcastConfig): void {
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("pagehide", onPageHide);
 
+    const routeTracker = trackRoutes(() => {
+      flush(false); // close the current chunk under the page it belongs to
+      currentUrl = window.location.href;
+      debugLog(resolved, "route ->", currentUrl);
+    });
+
     const submitReport = (comment?: string): void => {
       try {
         flush(false); // the story so far should arrive with the flag
@@ -103,7 +117,7 @@ export function init(config: HindcastConfig): void {
           key: resolved.key,
           sessionId: session.id,
           startedAt: session.startedAt,
-          url: window.location.href,
+          url: currentUrl,
           comment: comment?.trim() || undefined,
         });
         debugLog(resolved, "session reported");
@@ -143,6 +157,7 @@ export function init(config: HindcastConfig): void {
       stopRecorder,
       errorCapture,
       networkCapture,
+      routeTracker,
       widget,
       flushTimer,
       onVisibilityChange,
@@ -180,6 +195,7 @@ export function stop(): void {
     current.stopRecorder();
     current.errorCapture.stop();
     current.networkCapture.stop();
+    current.routeTracker.stop();
     current.widget?.destroy();
     current.flush(false);
   } catch {

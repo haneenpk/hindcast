@@ -15,7 +15,8 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node scripts/check-size.mjs",
+    "size": "node scripts/check-size.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
