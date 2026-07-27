@@ -1,0 +1,14 @@
+{
+  "name": "@hindcast/seed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "node src/seed.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1085.0",
+    "@hindcast/db": "workspace:*",
+    "dotenv": "^17.4.2"
+  }
+}

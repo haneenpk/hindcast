@@ -89,6 +89,14 @@ Fernwood ships with three planted bugs — a coupon code that throws, a
 stock check that fails, and a newsletter signup nobody catches — so
 there is always something worth replaying.
 
+Or skip the recording and populate the dashboard with realistic,
+replayable demo data:
+
+```sh
+cp packages/seed/.env.example packages/seed/.env   # mirror your ports
+pnpm seed
+```
+
 The ingest integration tests boot the built server against the compose
 stack, so have `docker compose up -d` running before `pnpm test`.
 
@@ -130,5 +138,7 @@ rotate from settings, and CORS is open to all origins but credential-free
 by design. The SDK ships two ways — an npm package and a single
 self-contained `r.js` embed (rrweb bundled in, ~60 KB gzipped, under a
 budget CI enforces) — tracks SPA route changes, and never breaks the
-host page. Next: a seed script and demo mode with realistic sample
-sessions.
+host page. `pnpm seed` fills a fresh install with 45 replayable sample
+sessions across three projects, built from real recorded journeys, so
+the dashboard opens to a product rather than empty states. Next: a
+visual polish pass with the player as the showpiece.
