@@ -140,5 +140,6 @@ self-contained `r.js` embed (rrweb bundled in, ~60 KB gzipped, under a
 budget CI enforces) — tracks SPA route changes, and never breaks the
 host page. `pnpm seed` fills a fresh install with 45 replayable sample
 sessions across three projects, built from real recorded journeys, so
-the dashboard opens to a product rather than empty states. Next: a
-visual polish pass with the player as the showpiece.
+the dashboard opens to a product rather than empty states. The player
+goes fullscreen (button or the `f` key) and refits the replay to any
+viewport. Next: the landing page and self-host docs.

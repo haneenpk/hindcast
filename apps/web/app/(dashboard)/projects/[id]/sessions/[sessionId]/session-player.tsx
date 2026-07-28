@@ -49,9 +49,13 @@ export function SessionPlayer({
   networkEntries?: NetworkEntry[];
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
   const replayerRef = useRef<ReplayerLike | null>(null);
   const scrubbingRef = useRef(false);
+  const recWRef = useRef(1024);
+  const recHRef = useRef(576);
   const [state, setState] = useState<PlayerState>("loading");
   const [playing, setPlaying] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -61,6 +65,35 @@ export function SessionPlayer({
   const [speed, setSpeed] = useState<Speed>(1);
   const [skipInactive, setSkipInactive] = useState(false);
   const [skipping, setSkipping] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // Fits the recorded viewport into whatever space the stage has right
+  // now — recomputed on mount, on resize, and when fullscreen flips, so
+  // the replay never sits scaled to a stale width.
+  const rescale = (): void => {
+    const stage = stageRef.current;
+    const wrapper = stage?.querySelector<HTMLElement>(".replayer-wrapper");
+    const recW = recWRef.current;
+    const recH = recHRef.current;
+    if (!stage || !wrapper || !recW || !recH) return;
+
+    const isFs = document.fullscreenElement === shellRef.current;
+    let scale: number;
+    if (isFs) {
+      const controlsH = controlsRef.current?.offsetHeight ?? 44;
+      scale = Math.min(
+        window.innerWidth / recW,
+        (window.innerHeight - controlsH) / recH,
+      );
+      stage.style.width = `${Math.round(recW * scale)}px`;
+    } else {
+      const availW = wrapperRef.current?.clientWidth ?? 848;
+      scale = Math.min(availW / recW, 1);
+      stage.style.width = "";
+    }
+    stage.style.height = `${Math.round(recH * scale)}px`;
+    wrapper.style.transform = `scale(${scale})`;
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -96,18 +129,10 @@ export function SessionPlayer({
         }) as unknown as ReplayerLike;
         replayerRef.current = replayer;
 
-        // Scale the recorded viewport down into the stage.
         const meta = events.find((event) => event.type === 4);
-        const recordedWidth = meta?.data?.width ?? 1024;
-        const recordedHeight = meta?.data?.height ?? 576;
-        const width = wrapperRef.current?.clientWidth ?? 848;
-        const scale = Math.min(width / recordedWidth, 1);
-        stage.style.height = `${Math.round(recordedHeight * scale)}px`;
-        const replayerWrapper =
-          stage.querySelector<HTMLElement>(".replayer-wrapper");
-        if (replayerWrapper) {
-          replayerWrapper.style.transform = `scale(${scale})`;
-        }
+        recWRef.current = meta?.data?.width ?? 1024;
+        recHRef.current = meta?.data?.height ?? 576;
+        rescale();
         // pointer-events: none stops the mouse; inert also stops keyboard
         // focus from tabbing into the replayed document.
         stage.querySelector("iframe")?.setAttribute("inert", "");
@@ -153,6 +178,31 @@ export function SessionPlayer({
       if (stage) stage.innerHTML = "";
     };
   }, [sessionId]);
+
+  // Keep the replay fitted as the window resizes and as fullscreen flips.
+  useEffect(() => {
+    if (state !== "ready") return;
+    let raf = 0;
+    const schedule = (): void => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(rescale);
+    };
+    const onFullscreen = (): void => {
+      setFullscreen(document.fullscreenElement === shellRef.current);
+      schedule();
+    };
+    const observer = new ResizeObserver(schedule);
+    if (wrapperRef.current) observer.observe(wrapperRef.current);
+    window.addEventListener("resize", schedule);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+      window.removeEventListener("resize", schedule);
+      document.removeEventListener("fullscreenchange", onFullscreen);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   const toggle = () => {
     const replayer = replayerRef.current;
@@ -203,9 +253,23 @@ export function SessionPlayer({
     if (playing) replayer.play(replayer.getCurrentTime());
   };
 
+  const toggleFullscreen = () => {
+    const el = shellRef.current;
+    if (!el) return;
+    try {
+      if (document.fullscreenElement === el) {
+        void document.exitFullscreen();
+      } else {
+        void el.requestFullscreen();
+      }
+    } catch {
+      /* fullscreen can be blocked by policy; nothing to do */
+    }
+  };
+
   // Keyboard transport, kept fresh via a ref so listeners never go stale.
-  const transportRef = useRef({ toggle, seek, timeMs });
-  transportRef.current = { toggle, seek, timeMs };
+  const transportRef = useRef({ toggle, seek, toggleFullscreen, timeMs });
+  transportRef.current = { toggle, seek, toggleFullscreen, timeMs };
 
   useEffect(() => {
     if (state !== "ready") return;
@@ -223,6 +287,9 @@ export function SessionPlayer({
       } else if (event.key === "ArrowRight") {
         event.preventDefault();
         transportRef.current.seek(transportRef.current.timeMs + 5000);
+      } else if (event.key === "f" || event.key === "F") {
+        event.preventDefault();
+        transportRef.current.toggleFullscreen();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -247,7 +314,9 @@ export function SessionPlayer({
       {state !== "ready" ? (
         <div className="flex aspect-video items-center justify-center rounded-lg border border-edge bg-surface">
           {state === "loading" ? (
-            <span className="text-faint text-[13px]">Loading session…</span>
+            <span className="text-faint animate-pulse text-[13px]">
+              Loading session…
+            </span>
           ) : state === "empty" ? (
             <span className="text-muted text-[13px]">
               Not enough recorded events to replay this session.
@@ -261,80 +330,115 @@ export function SessionPlayer({
       ) : null}
 
       <div className={state === "ready" ? "" : "invisible h-0 overflow-hidden"}>
-        <div className="relative">
+        <div ref={shellRef} className="player-shell">
+          <div className="stage-wrap relative">
+            <div
+              ref={stageRef}
+              onClick={toggle}
+              className="session-stage cursor-pointer overflow-hidden rounded-t-lg border border-b-0 border-edge bg-surface"
+            />
+            {skipping ? (
+              <span className="text-amber pointer-events-none absolute top-2.5 right-2.5 rounded bg-black/70 px-2 py-0.5 text-[11px] tracking-wide uppercase">
+                skipping idle
+              </span>
+            ) : null}
+          </div>
+
           <div
-            ref={stageRef}
-            onClick={toggle}
-            className="session-stage cursor-pointer overflow-hidden rounded-t-lg border border-b-0 border-edge bg-surface"
-          />
-          {skipping ? (
-            <span className="text-amber absolute top-2.5 right-2.5 rounded bg-black/70 px-2 py-0.5 text-[11px] tracking-wide uppercase">
-              skipping idle
+            ref={controlsRef}
+            className="player-controls flex items-center gap-3 rounded-b-lg border border-edge bg-surface px-3 py-2"
+          >
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={playing ? "Pause" : "Play"}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-raised"
+            >
+              {playing ? (
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+                  <rect x="3" y="2" width="3.5" height="12" fill="currentColor" />
+                  <rect x="9.5" y="2" width="3.5" height="12" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+                  <path d="M4 2v12l10-6z" fill="currentColor" />
+                </svg>
+              )}
+            </button>
+
+            <span className="text-muted w-12 shrink-0 text-right font-mono text-xs tabular-nums">
+              {formatClock(Math.min(timeMs, totalMs))}
             </span>
-          ) : null}
-        </div>
 
-        <div className="flex items-center gap-3 rounded-b-lg border border-edge bg-surface px-3 py-2">
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={playing ? "Pause" : "Play"}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-raised"
-          >
-            {playing ? (
-              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
-                <rect x="3" y="2" width="3.5" height="12" fill="currentColor" />
-                <rect x="9.5" y="2" width="3.5" height="12" fill="currentColor" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
-                <path d="M4 2v12l10-6z" fill="currentColor" />
-              </svg>
-            )}
-          </button>
+            <Scrubber
+              timeMs={timeMs}
+              totalMs={totalMs}
+              markers={scrubberMarkers}
+              onScrub={(ms) => setTimeMs(ms)}
+              onCommit={seek}
+              onDragChange={(dragging) => {
+                scrubbingRef.current = dragging;
+              }}
+            />
 
-          <span className="text-muted w-12 shrink-0 text-right font-mono text-xs tabular-nums">
-            {formatClock(Math.min(timeMs, totalMs))}
-          </span>
+            <span className="text-faint w-12 shrink-0 font-mono text-xs tabular-nums">
+              {formatClock(totalMs)}
+            </span>
 
-          <Scrubber
-            timeMs={timeMs}
-            totalMs={totalMs}
-            markers={scrubberMarkers}
-            onScrub={(ms) => setTimeMs(ms)}
-            onCommit={seek}
-            onDragChange={(dragging) => {
-              scrubbingRef.current = dragging;
-            }}
-          />
+            <div className="bg-edge h-4 w-px shrink-0" aria-hidden />
 
-          <span className="text-faint w-12 shrink-0 font-mono text-xs tabular-nums">
-            {formatClock(totalMs)}
-          </span>
+            <button
+              type="button"
+              onClick={cycleSpeed}
+              aria-label={`Playback speed ${speed}x`}
+              title="Playback speed"
+              className="text-muted w-8 shrink-0 rounded-md py-1 text-center font-mono text-xs transition-colors hover:bg-raised hover:text-fg"
+            >
+              {speed}×
+            </button>
 
-          <button
-            type="button"
-            onClick={cycleSpeed}
-            aria-label={`Playback speed ${speed}x`}
-            title="Playback speed"
-            className="text-muted w-8 shrink-0 rounded-md px-1 py-1 text-center font-mono text-xs transition-colors hover:bg-raised hover:text-fg"
-          >
-            {speed}×
-          </button>
+            <button
+              type="button"
+              onClick={toggleSkipInactive}
+              aria-pressed={skipInactive}
+              title="Fast-forward through idle stretches"
+              className={`shrink-0 rounded-md border px-2 py-1 text-[11px] tracking-wide uppercase transition-colors ${
+                skipInactive
+                  ? "border-amber/50 text-amber"
+                  : "border-edge text-muted hover:text-fg"
+              }`}
+            >
+              skip idle
+            </button>
 
-          <button
-            type="button"
-            onClick={toggleSkipInactive}
-            aria-pressed={skipInactive}
-            title="Fast-forward through idle stretches"
-            className={`shrink-0 rounded-md border px-2 py-1 text-[11px] tracking-wide uppercase transition-colors ${
-              skipInactive
-                ? "border-amber/50 text-amber"
-                : "border-edge text-muted hover:text-fg"
-            }`}
-          >
-            skip idle
-          </button>
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+              title="Fullscreen (F)"
+              className="text-muted flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-raised hover:text-fg"
+            >
+              {fullscreen ? (
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+                  <path
+                    d="M6 2v4H2M10 2v4h4M6 14v-4H2M10 14v-4h4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                  />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+                  <path
+                    d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
 
         <SessionLanes
