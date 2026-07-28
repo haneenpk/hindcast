@@ -102,13 +102,23 @@ export default async function SessionPage({ params }: Props) {
             ) : null}
           </p>
         </div>
-        <p className="text-muted shrink-0 pl-4 text-[13px]">
-          {describeDevice(session.userAgent)} ·{" "}
-          <span className="font-mono text-xs">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 pl-4">
+          <span className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-muted">
+            {describeDevice(session.userAgent)}
+          </span>
+          <span className="rounded-md border border-edge bg-surface px-2 py-1 font-mono text-[12px] tabular-nums text-muted">
             {formatDuration(durationMs)}
-          </span>{" "}
-          · {formatRelative(session.startedAt)}
-        </p>
+          </span>
+          <span className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-faint">
+            {formatRelative(session.startedAt)}
+          </span>
+          {errors.length > 0 ? (
+            <span className="border-red/40 text-red flex items-center gap-1 rounded-md border bg-surface px-2 py-1 text-[12px] tabular-nums">
+              <span className="bg-red h-1.5 w-1.5 rounded-full" />
+              {errors.length} {errors.length === 1 ? "error" : "errors"}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {session.reportedAt ? (
