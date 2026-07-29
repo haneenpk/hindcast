@@ -353,7 +353,7 @@ export function SessionPlayer({
 
           <div
             ref={controlsRef}
-            className="player-controls flex items-center gap-3 rounded-b-lg border border-edge bg-surface px-3 py-2"
+            className="player-controls flex items-center gap-2.5 rounded-b-lg border border-edge bg-surface px-3 py-1.5"
           >
             <button
               type="button"

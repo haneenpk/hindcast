@@ -166,34 +166,47 @@ init({
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-3 text-[13px] font-medium">Danger</h2>
-        <div className="divide-y divide-edge rounded-lg border border-edge bg-surface">
+      <section className="mb-8">
+        <h2 className="mb-3 text-[13px] font-medium">General</h2>
+        <div className="rounded-lg border border-edge bg-surface">
           <form
             action={renameProject}
-            className="flex items-center gap-2 px-4 py-3"
+            className="flex items-center justify-between gap-2 px-4 py-3"
           >
-            <input type="hidden" name="id" value={project.id} />
-            <input
-              name="name"
-              defaultValue={project.name}
-              required
-              maxLength={64}
-              className="w-56 rounded-md border border-edge bg-bg px-3 py-1.5 text-[13px] outline-none focus:border-edge-strong"
-            />
-            <button
-              type="submit"
-              className="rounded-md border border-edge px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg"
-            >
-              Rename
-            </button>
+            <label className="text-muted text-[13px]" htmlFor="project-name">
+              Project name
+            </label>
+            <div className="flex shrink-0 items-center gap-2">
+              <input type="hidden" name="id" value={project.id} />
+              <input
+                id="project-name"
+                name="name"
+                defaultValue={project.name}
+                required
+                maxLength={64}
+                className="w-56 rounded-md border border-edge bg-bg px-3 py-1.5 text-[13px] outline-none focus:border-edge-strong"
+              />
+              <button
+                type="submit"
+                className="rounded-md border border-edge px-3 py-1.5 text-[13px] text-muted transition-colors hover:text-fg"
+              >
+                Rename
+              </button>
+            </div>
           </form>
-          <div className="flex items-center justify-between px-4 py-3">
-            <p className="text-muted text-[13px]">
-              Deletes the project and every recorded session with it.
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-red mb-3 text-[13px] font-medium">Danger zone</h2>
+        <div className="border-red/30 flex items-center justify-between rounded-lg border bg-surface px-4 py-3">
+          <div>
+            <p className="text-[13px]">Delete this project</p>
+            <p className="text-muted mt-0.5 text-[13px]">
+              Every recorded session goes with it. This can&apos;t be undone.
             </p>
-            <DeleteProject projectId={project.id} />
           </div>
+          <DeleteProject projectId={project.id} />
         </div>
       </section>
     </div>
