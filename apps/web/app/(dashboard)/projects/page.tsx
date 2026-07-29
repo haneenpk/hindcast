@@ -104,14 +104,21 @@ export default async function ProjectsPage() {
         <CreateForm />
       </div>
 
-      <section className="mb-8">
-        <h2 className="text-faint mb-2 text-[11px] font-medium tracking-wide uppercase">
+      <section className="mb-9">
+        <h2 className="mb-3 flex items-baseline gap-2 text-[15px] font-medium">
           Needs attention
+          {attention.length > 0 ? (
+            <span className="text-faint text-xs tabular-nums">
+              {attention.length}
+            </span>
+          ) : null}
         </h2>
         {attention.length === 0 ? (
-          <div className="rounded-lg border border-edge bg-surface px-4 py-5">
-            <p className="text-muted text-[13px]">
-              Nothing broken or reported across your projects. Quiet is good.
+          <div className="rounded-lg border border-edge bg-surface px-4 py-6">
+            <p className="text-[13px]">Nothing broken or reported.</p>
+            <p className="text-muted mt-1 text-[13px]">
+              When a session captures an error or a visitor reports one, it
+              surfaces here first.
             </p>
           </div>
         ) : (
@@ -120,9 +127,9 @@ export default async function ProjectsPage() {
               <li key={session.id}>
                 <Link
                   href={`/projects/${session.projectId}/sessions/${session.id}`}
-                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised/50"
+                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised"
                 >
-                  <span className="flex shrink-0 items-center gap-1">
+                  <span className="flex w-2.5 shrink-0 justify-center gap-1">
                     {session.hasError ? (
                       <span
                         className="bg-red h-1.5 w-1.5 rounded-full"
@@ -136,13 +143,13 @@ export default async function ProjectsPage() {
                       />
                     ) : null}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px]">
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
                     {entryPath(session.entryUrl)}
                   </span>
                   <span className="text-muted shrink-0 truncate text-[13px]">
                     {session.project.name}
                   </span>
-                  <span className="text-faint shrink-0 text-right text-[13px] tabular-nums">
+                  <span className="text-faint w-16 shrink-0 text-right text-[13px] tabular-nums">
                     {formatRelative(session.startedAt)}
                   </span>
                 </Link>
@@ -164,15 +171,23 @@ export default async function ProjectsPage() {
               <Link
                 key={project.id}
                 href={`/projects/${project.id}`}
-                className="rounded-lg border border-edge bg-surface p-4 transition-colors hover:bg-raised/50"
+                className="block rounded-lg border border-edge bg-surface p-4 transition-colors hover:bg-raised"
               >
-                <div className="mb-3 min-w-0">
-                  <p className="truncate font-medium">{project.name}</p>
-                  <p className="text-faint truncate font-mono text-xs">
-                    {project.key}
-                  </p>
+                <div className="mb-3 flex items-start gap-2">
+                  <span
+                    className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                      errored > 0 ? "bg-red" : "bg-green"
+                    }`}
+                    title={errored > 0 ? `${errored} errored` : "healthy"}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{project.name}</p>
+                    <p className="text-faint truncate font-mono text-xs">
+                      {project.key}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-[13px]">
+                <div className="flex items-center gap-3 text-[13px]">
                   <span className="text-muted tabular-nums">
                     {project._count.sessions}{" "}
                     {project._count.sessions === 1 ? "session" : "sessions"}
