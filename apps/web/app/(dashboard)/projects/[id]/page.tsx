@@ -143,62 +143,64 @@ export default async function ProjectSessionsPage({
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-edge bg-surface">
-          <div className="text-faint grid grid-cols-[minmax(0,1fr)_150px_60px_70px_80px] gap-3 border-b border-edge px-4 py-2 text-[11px] font-medium tracking-wide uppercase">
+        <div className="overflow-hidden rounded-lg border border-edge bg-surface">
+          <div className="text-faint grid grid-cols-[minmax(0,1fr)_140px_60px_92px] gap-3 border-b border-edge px-4 py-2 text-[11px] font-medium tracking-wide uppercase">
             <span>Session</span>
             <span>Device</span>
-            <span className="text-right">Pages</span>
-            <span className="text-right">Duration</span>
-            <span className="text-right">Started</span>
+            <span className="text-right">Length</span>
+            <span className="text-right">When</span>
           </div>
           <ul className="divide-y divide-edge">
-            {sessions.map((session) => (
-              <li key={session.id}>
-                <Link
-                  href={`/projects/${project.id}/sessions/${session.id}`}
-                  className="grid grid-cols-[minmax(0,1fr)_150px_60px_70px_80px] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised/50"
-                >
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1.5 text-[13px]">
-                      {session.hasError ? (
-                        <span
-                          className="bg-red h-1.5 w-1.5 shrink-0 rounded-full"
-                          title="Session captured errors"
-                        />
-                      ) : null}
-                      {session.reportedAt ? (
-                        <span
-                          className="bg-amber h-1.5 w-1.5 shrink-0 rounded-full"
-                          title="Reported by the visitor"
-                        />
-                      ) : null}
-                      <span className="truncate">
-                        {entryPath(session.entryUrl)}
+            {sessions.map((session) => {
+              const pages = pageCounts.get(session.id) ?? 1;
+              return (
+                <li key={session.id}>
+                  <Link
+                    href={`/projects/${project.id}/sessions/${session.id}`}
+                    className="grid grid-cols-[minmax(0,1fr)_140px_60px_92px] items-center gap-3 px-4 py-2 transition-colors hover:bg-raised"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="flex w-2.5 shrink-0 justify-center gap-1">
+                        {session.hasError ? (
+                          <span
+                            className="bg-red h-1.5 w-1.5 rounded-full"
+                            title="Captured errors"
+                          />
+                        ) : null}
+                        {session.reportedAt ? (
+                          <span
+                            className="bg-amber h-1.5 w-1.5 rounded-full"
+                            title="Reported by the visitor"
+                          />
+                        ) : null}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13px] font-medium">
+                          {entryPath(session.entryUrl)}
+                        </span>
+                        <span className="text-faint block truncate font-mono text-[11px]">
+                          {session.id.slice(0, 8)}
+                          {pages > 1 ? ` · ${pages} pages` : ""}
+                        </span>
                       </span>
                     </span>
-                    <span className="text-faint block font-mono text-[11px]">
-                      {session.id.slice(0, 8)}
+                    <span className="text-muted truncate text-[13px]">
+                      {deviceLabel(session)}
                     </span>
-                  </span>
-                  <span className="text-muted truncate text-[13px]">
-                    {deviceLabel(session)}
-                  </span>
-                  <span className="text-muted text-right text-[13px] tabular-nums">
-                    {pageCounts.get(session.id) ?? 1}
-                  </span>
-                  <span className="text-right font-mono text-xs tabular-nums">
-                    {formatDuration(
-                      session.durationMs ||
-                        session.lastEventAt.getTime() -
-                          session.startedAt.getTime(),
-                    )}
-                  </span>
-                  <span className="text-faint text-right text-[13px]">
-                    {formatRelative(session.startedAt)}
-                  </span>
-                </Link>
-              </li>
-            ))}
+                    <span className="text-muted text-right font-mono text-xs tabular-nums">
+                      {formatDuration(
+                        session.durationMs ||
+                          session.lastEventAt.getTime() -
+                            session.startedAt.getTime(),
+                      )}
+                    </span>
+                    <span className="text-faint text-right text-[13px]">
+                      {formatRelative(session.startedAt)}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
