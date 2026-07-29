@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatClock } from "@/lib/format";
+
+export interface LaneFocus {
+  id: string;
+  kind: "error" | "network";
+  nonce: number;
+}
 
 export interface ConsoleEntry {
   id: string;
@@ -52,12 +58,14 @@ export function SessionLanes({
   startTime,
   totalMs,
   onJump,
+  focus = null,
 }: {
   consoleEntries: ConsoleEntry[];
   networkEntries: NetworkEntry[];
   startTime: number;
   totalMs: number;
   onJump(offsetMs: number): void;
+  focus?: LaneFocus | null;
 }) {
   const [tab, setTab] = useState<"console" | "network">(
     consoleEntries.length > 0 || networkEntries.length === 0
@@ -65,12 +73,42 @@ export function SessionLanes({
       : "network",
   );
   const [selected, setSelected] = useState<Selection | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const offsetOf = (timestamp: number): number =>
     Math.min(Math.max(timestamp - startTime, 0), totalMs);
 
+  // Driven by a marker click on the scrubber: bring the matching row into
+  // its lane and pulse it, so an error on the timeline and its detail row
+  // are unmistakably the same event.
+  useEffect(() => {
+    if (!focus) return;
+    setTab(focus.kind === "error" ? "console" : "network");
+    const id = focus.id;
+    const timer = setTimeout(() => {
+      const row = rootRef.current?.querySelector<HTMLElement>(
+        `[data-entry-id="${CSS.escape(id)}"]`,
+      );
+      if (!row) return;
+      row.scrollIntoView({ block: "nearest" });
+      try {
+        row.animate(
+          [
+            { backgroundColor: "rgba(255,255,255,0.07)" },
+            { backgroundColor: "rgba(255,255,255,0)" },
+          ],
+          { duration: 900, easing: "ease-out" },
+        );
+      } catch {
+        /* WAAPI not available — the scroll still landed it */
+      }
+    }, 60);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.nonce]);
+
   return (
-    <div className="mt-4 rounded-lg border border-edge bg-surface">
+    <div ref={rootRef} className="mt-4 rounded-lg border border-edge bg-surface">
       <div className="flex gap-1 border-b border-edge px-2 pt-1.5">
         {(
           [
@@ -107,6 +145,7 @@ export function SessionLanes({
               <li key={entry.id}>
                 <button
                   type="button"
+                  data-entry-id={entry.id}
                   onClick={() => setSelected({ kind: "console", entry })}
                   className="grid w-full grid-cols-[8px_minmax(0,1fr)_auto_44px] items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-raised/50"
                 >
@@ -135,6 +174,7 @@ export function SessionLanes({
               <li key={entry.id}>
                 <button
                   type="button"
+                  data-entry-id={entry.id}
                   onClick={() => setSelected({ kind: "network", entry })}
                   className="grid w-full grid-cols-[44px_minmax(0,1fr)_60px_56px_44px] items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-raised/50"
                 >

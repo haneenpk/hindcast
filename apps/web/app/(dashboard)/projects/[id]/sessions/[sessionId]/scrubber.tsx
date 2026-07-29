@@ -1,7 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { formatClock } from "@/lib/format";
+
+interface Cluster {
+  markers: ScrubberMarker[];
+  offsetMs: number;
+  hasError: boolean;
+}
 
 export interface ScrubberMarker {
   id: string;
@@ -17,6 +23,7 @@ export function Scrubber({
   onScrub,
   onCommit,
   onDragChange,
+  onMarkerClick,
 }: {
   timeMs: number;
   totalMs: number;
@@ -26,6 +33,8 @@ export function Scrubber({
   /** The real seek, once per release or click. */
   onCommit(ms: number): void;
   onDragChange(dragging: boolean): void;
+  /** A marker was clicked — the player seeks and syncs the lanes. */
+  onMarkerClick?(marker: ScrubberMarker): void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -39,6 +48,33 @@ export function Scrubber({
   };
 
   const playedPct = totalMs > 0 ? Math.min(timeMs / totalMs, 1) * 100 : 0;
+
+  // Marks closer together than the eye can separate are grouped into one
+  // tick; hovering it lists what's inside so nothing hides under a
+  // neighbour.
+  const clusters = useMemo<Cluster[]>(() => {
+    if (totalMs <= 0 || markers.length === 0) return [];
+    const gap = Math.max(totalMs * 0.015, 300);
+    const sorted = [...markers].sort((a, b) => a.offsetMs - b.offsetMs);
+    const out: Cluster[] = [];
+    for (const marker of sorted) {
+      const last = out[out.length - 1];
+      const anchor = last?.markers[0];
+      if (last && anchor && marker.offsetMs - anchor.offsetMs <= gap) {
+        last.markers.push(marker);
+      } else {
+        out.push({ markers: [marker], offsetMs: marker.offsetMs, hasError: false });
+      }
+    }
+    for (const cluster of out) {
+      cluster.offsetMs = Math.round(
+        cluster.markers.reduce((sum, m) => sum + m.offsetMs, 0) /
+          cluster.markers.length,
+      );
+      cluster.hasError = cluster.markers.some((m) => m.kind === "error");
+    }
+    return out;
+  }, [markers, totalMs]);
 
   return (
     <div
@@ -82,22 +118,61 @@ export function Scrubber({
         />
       </div>
 
-      {markers.map((marker) => (
-        <button
-          key={marker.id}
-          type="button"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => onCommit(marker.offsetMs)}
-          title={`${formatClock(marker.offsetMs)} · ${marker.label}`}
-          aria-label={`Jump to ${marker.kind} at ${formatClock(marker.offsetMs)}`}
-          className={`absolute top-1 h-2 w-0.75 -translate-x-1/2 rounded-full transition-[height] hover:h-3 ${
-            marker.kind === "error" ? "bg-red" : "bg-amber"
-          }`}
-          style={{
-            left: `${totalMs > 0 ? (marker.offsetMs / totalMs) * 100 : 0}%`,
-          }}
-        />
-      ))}
+      {clusters.map((cluster, index) => {
+        const left = (cluster.offsetMs / totalMs) * 100;
+        const multi = cluster.markers.length > 1;
+        return (
+          <div
+            key={index}
+            className="group/mk absolute top-0 bottom-0 z-10 flex w-2 -translate-x-1/2 items-center justify-center"
+            style={{ left: `${left}%` }}
+          >
+            <button
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => {
+                const first = cluster.markers[0];
+                if (!first) return;
+                if (onMarkerClick) onMarkerClick(first);
+                else onCommit(first.offsetMs);
+              }}
+              aria-label={`${cluster.markers.length} event${
+                multi ? "s" : ""
+              } at ${formatClock(cluster.offsetMs)}`}
+              className={`h-2.5 rounded-full transition-[height] group-hover/mk:h-3.5 ${
+                multi ? "w-1" : "w-0.75"
+              } ${cluster.hasError ? "bg-red" : "bg-amber"}`}
+            />
+            <div className="absolute bottom-full left-1/2 z-30 hidden -translate-x-1/2 pb-2 group-hover/mk:block">
+              <div className="max-h-40 w-60 max-w-[70vw] overflow-y-auto rounded-md border border-edge bg-raised p-1">
+                {cluster.markers.map((marker) => (
+                  <button
+                    key={marker.id}
+                    type="button"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() =>
+                      onMarkerClick
+                        ? onMarkerClick(marker)
+                        : onCommit(marker.offsetMs)
+                    }
+                    className="flex w-full items-center gap-2 rounded px-2 py-1 text-left transition-colors hover:bg-surface"
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                        marker.kind === "error" ? "bg-red" : "bg-amber"
+                      }`}
+                    />
+                    <span className="text-faint shrink-0 font-mono text-[11px] tabular-nums">
+                      {formatClock(marker.offsetMs)}
+                    </span>
+                    <span className="truncate text-[12px]">{marker.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
 
       <span
         className={`bg-amber pointer-events-none absolute h-3 w-3 -translate-x-1/2 rounded-full transition-opacity ${
