@@ -147,14 +147,16 @@ export function SessionLanes({
                   type="button"
                   data-entry-id={entry.id}
                   onClick={() => setSelected({ kind: "console", entry })}
-                  className="grid w-full grid-cols-[8px_minmax(0,1fr)_auto_44px] items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-raised/50"
+                  className="grid w-full grid-cols-[8px_minmax(0,1fr)_auto_44px] items-center gap-3 px-4 py-1.5 text-left transition-colors hover:bg-raised/50"
                 >
                   <span className="bg-red h-1.5 w-1.5 rounded-full" />
-                  <span className="truncate text-[13px]">{entry.message}</span>
+                  <span className="truncate font-mono text-xs">
+                    {entry.message}
+                  </span>
                   <span className="text-faint text-[11px] tracking-wide uppercase">
                     {SOURCE_LABEL[entry.source] ?? entry.source}
                   </span>
-                  <span className="text-muted text-right font-mono text-xs tabular-nums">
+                  <span className="text-faint text-right font-mono text-xs tabular-nums">
                     {formatClock(offsetOf(entry.timestamp))}
                   </span>
                 </button>
@@ -176,21 +178,23 @@ export function SessionLanes({
                   type="button"
                   data-entry-id={entry.id}
                   onClick={() => setSelected({ kind: "network", entry })}
-                  className="grid w-full grid-cols-[44px_minmax(0,1fr)_60px_56px_44px] items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-raised/50"
+                  className="grid w-full grid-cols-[46px_minmax(0,1fr)_48px_56px_44px] items-center gap-3 px-4 py-1.5 text-left transition-colors hover:bg-raised/50"
                 >
-                  <span className="font-mono text-xs">{entry.method}</span>
-                  <span className="truncate text-[13px]">
+                  <span className="text-muted font-mono text-xs">
+                    {entry.method}
+                  </span>
+                  <span className="truncate font-mono text-xs">
                     {pathOf(entry.url)}
                   </span>
                   <span
-                    className={`font-mono text-xs ${failed ? "text-red" : "text-muted"}`}
+                    className={`font-mono text-xs tabular-nums ${failed ? "text-red" : "text-muted"}`}
                   >
                     {entry.status ?? "—"}
                   </span>
                   <span className="text-muted text-right font-mono text-xs tabular-nums">
                     {entry.durationMs !== null ? `${entry.durationMs}ms` : "—"}
                   </span>
-                  <span className="text-muted text-right font-mono text-xs tabular-nums">
+                  <span className="text-faint text-right font-mono text-xs tabular-nums">
                     {formatClock(offsetOf(entry.timestamp))}
                   </span>
                 </button>
