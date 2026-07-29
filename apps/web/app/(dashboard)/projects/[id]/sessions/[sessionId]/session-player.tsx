@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { formatClock } from "@/lib/format";
 import { Scrubber } from "./scrubber";
+import type { ScrubberMarker } from "./scrubber";
 import { SessionLanes } from "./session-lanes";
-import type { ConsoleEntry, NetworkEntry } from "./session-lanes";
+import type { ConsoleEntry, LaneFocus, NetworkEntry } from "./session-lanes";
 import "@rrweb/replay/dist/style.css";
 
 // Built straight on @rrweb/replay: the rrweb-player UI package (2.1.0)
@@ -66,6 +67,7 @@ export function SessionPlayer({
   const [skipInactive, setSkipInactive] = useState(false);
   const [skipping, setSkipping] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [laneFocus, setLaneFocus] = useState<LaneFocus | null>(null);
 
   // Fits the recorded viewport into whatever space the stage has right
   // now — recomputed on mount, on resize, and when fullscreen flips, so
@@ -296,6 +298,11 @@ export function SessionPlayer({
     return () => window.removeEventListener("keydown", onKey);
   }, [state]);
 
+  const onMarkerClick = (marker: ScrubberMarker): void => {
+    seek(marker.offsetMs);
+    setLaneFocus({ id: marker.id, kind: marker.kind, nonce: performance.now() });
+  };
+
   const scrubberMarkers =
     totalMs > 0
       ? markers.map((marker) => ({
@@ -376,6 +383,7 @@ export function SessionPlayer({
               markers={scrubberMarkers}
               onScrub={(ms) => setTimeMs(ms)}
               onCommit={seek}
+              onMarkerClick={onMarkerClick}
               onDragChange={(dragging) => {
                 scrubbingRef.current = dragging;
               }}
@@ -447,6 +455,7 @@ export function SessionPlayer({
           startTime={startTime}
           totalMs={totalMs}
           onJump={seek}
+          focus={laneFocus}
         />
       </div>
     </div>
