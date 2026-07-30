@@ -23,7 +23,7 @@ export default async function ProjectLayout({
   if (!project) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <Link
         href="/projects"
         className="text-muted text-[13px] transition-colors hover:text-fg"
