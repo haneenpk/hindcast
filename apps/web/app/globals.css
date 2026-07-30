@@ -40,6 +40,13 @@ body {
   background: color-mix(in srgb, var(--color-amber) 30%, transparent);
 }
 
+/* Edge/IE inject their own password reveal + clear controls; we ship our
+   own eye toggle, so hide the native ones to avoid a duplicate icon. */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
 /* The replay engine renders the recorded viewport at natural size; the
    stage scales it down to fit. */
 .session-stage .replayer-wrapper {

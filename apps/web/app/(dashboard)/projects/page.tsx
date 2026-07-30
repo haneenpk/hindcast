@@ -10,6 +10,11 @@ export const metadata: Metadata = { title: "Projects" };
 // that snapshot forever — projects created after the build never appear.
 export const dynamic = "force-dynamic";
 
+// The error rate and sparkline read from the most recent slice of a project's
+// sessions, so both mean the same thing the footer note promises.
+const RECENT_WINDOW = 100;
+const SPARK_BUCKETS = 12;
+
 function entryPath(url: string | null): string {
   if (!url) return "—";
   try {
@@ -20,23 +25,108 @@ function entryPath(url: string | null): string {
   }
 }
 
+function bucketErrors(sessionsDesc: { hasError: boolean }[]): number[] {
+  const buckets = new Array<number>(SPARK_BUCKETS).fill(0);
+  const count = sessionsDesc.length;
+  if (count === 0) return buckets;
+  // Oldest → newest, so the line reads left to right like time.
+  for (let i = 0; i < count; i += 1) {
+    const session = sessionsDesc[count - 1 - i];
+    if (!session?.hasError) continue;
+    const bucket = Math.min(
+      SPARK_BUCKETS - 1,
+      Math.floor((i / count) * SPARK_BUCKETS),
+    );
+    buckets[bucket] = (buckets[bucket] ?? 0) + 1;
+  }
+  return buckets;
+}
+
+function Sparkline({ data, healthy }: { data: number[]; healthy: boolean }) {
+  const width = 64;
+  const height = 26;
+  const max = Math.max(1, ...data);
+  const flat = data.every((value) => value === 0);
+  const stroke = healthy ? "var(--color-green)" : "var(--color-red)";
+
+  const points = flat
+    ? `0,${height / 2} ${width},${height / 2}`
+    : data
+        .map((value, index) => {
+          const x = (index / (data.length - 1)) * width;
+          const y = height - 1 - (value / max) * (height - 2);
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(" ");
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      className="shrink-0"
+      aria-hidden
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke={stroke}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={flat ? 0.5 : 0.9}
+      />
+    </svg>
+  );
+}
+
+function Metric({
+  value,
+  label,
+  tone,
+}: {
+  value: string;
+  label: string;
+  tone?: string;
+}) {
+  return (
+    <div>
+      <p
+        className={`text-[20px] leading-none font-medium tabular-nums ${tone ?? ""}`}
+      >
+        {value}
+      </p>
+      <p className="text-muted mt-1.5 text-[11px]">{label}</p>
+    </div>
+  );
+}
+
 function CreateForm() {
   return (
-    <form action={createProject} className="flex gap-2">
+    <form action={createProject} className="flex gap-2.5">
       <input
         name="name"
         required
         maxLength={64}
         placeholder="Project name"
-        className="w-48 rounded-md border border-edge bg-surface px-3 py-1.5 text-[13px] outline-none placeholder:text-faint focus:border-edge-strong"
+        className="placeholder:text-faint focus:border-edge-strong w-75 rounded-md border border-edge bg-surface px-3.5 py-2.5 text-[13px] outline-none"
       />
       <button
         type="submit"
-        className="rounded-md bg-white px-3 py-1.5 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
+        className="rounded-md bg-white px-4 py-2.5 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
       >
-        Create
+        Create project
       </button>
     </form>
+  );
+}
+
+function Header() {
+  return (
+    <div className="mb-8 flex items-center justify-between">
+      <h1 className="text-[26px] font-medium tracking-tight">Projects</h1>
+      <CreateForm />
+    </div>
   );
 }
 
@@ -48,16 +138,13 @@ export default async function ProjectsPage() {
 
   if (projects.length === 0) {
     return (
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-base font-medium">Projects</h1>
-          <CreateForm />
-        </div>
+      <div>
+        <Header />
         <div className="rounded-lg border border-edge bg-surface p-8">
           <p className="font-medium">No projects yet</p>
           <p className="text-muted mt-1 max-w-md text-[13px] leading-relaxed">
-            A project maps to one site you want to record. Create the first
-            one and Hindcast hands you the install snippet — sessions start
+            A project maps to one site you want to record. Create the first one
+            and Hindcast hands you the install snippet — sessions start
             appearing seconds after it ships.
           </p>
         </div>
@@ -66,17 +153,8 @@ export default async function ProjectsPage() {
   }
 
   const ids = projects.map((project) => project.id);
-  const [erroredRows, activityRows, attention] = await Promise.all([
-    prisma.session.groupBy({
-      by: ["projectId"],
-      where: { projectId: { in: ids }, hasError: true },
-      _count: { _all: true },
-    }),
-    prisma.session.groupBy({
-      by: ["projectId"],
-      where: { projectId: { in: ids } },
-      _max: { startedAt: true },
-    }),
+
+  const [attention, recentByProject] = await Promise.all([
     // The cross-project feed: whatever broke or got reported most recently,
     // wherever it happened — the first thing worth looking at each morning.
     prisma.session.findMany({
@@ -88,27 +166,47 @@ export default async function ProjectsPage() {
       take: 8,
       include: { project: { select: { name: true } } },
     }),
+    // The recent slice per project drives the error rate, sparkline, health
+    // dot and "last activity" — one bounded read each, no session bodies.
+    Promise.all(
+      projects.map((project) =>
+        prisma.session.findMany({
+          where: { projectId: project.id },
+          orderBy: { startedAt: "desc" },
+          take: RECENT_WINDOW,
+          select: { startedAt: true, hasError: true },
+        }),
+      ),
+    ),
   ]);
 
-  const erroredByProject = new Map(
-    erroredRows.map((row) => [row.projectId, row._count._all]),
-  );
-  const lastActiveByProject = new Map(
-    activityRows.map((row) => [row.projectId, row._max.startedAt]),
+  const stats = new Map(
+    projects.map((project, index) => {
+      const recent = recentByProject[index] ?? [];
+      const errored = recent.filter((session) => session.hasError).length;
+      const rate =
+        recent.length > 0 ? Math.round((errored / recent.length) * 100) : 0;
+      return [
+        project.id,
+        {
+          errored,
+          rate,
+          lastActive: recent[0]?.startedAt ?? null,
+          spark: bucketErrors(recent),
+        },
+      ];
+    }),
   );
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-base font-medium">Projects</h1>
-        <CreateForm />
-      </div>
+    <div>
+      <Header />
 
-      <section className="mb-9">
-        <h2 className="mb-3 flex items-baseline gap-2 text-[15px] font-medium">
+      <section className="mb-10">
+        <h2 className="mb-3 flex items-center gap-2 text-[15px] font-medium">
           Needs attention
           {attention.length > 0 ? (
-            <span className="text-faint text-xs tabular-nums">
+            <span className="bg-red/10 text-red rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums">
               {attention.length}
             </span>
           ) : null}
@@ -122,28 +220,24 @@ export default async function ProjectsPage() {
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-edge rounded-lg border border-edge bg-surface">
+          <ul className="divide-edge divide-y rounded-lg border border-edge bg-surface">
             {attention.map((session) => (
               <li key={session.id}>
                 <Link
                   href={`/projects/${session.projectId}/sessions/${session.id}`}
-                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised"
+                  className="hover:bg-raised/40 flex items-center gap-3 px-4 py-3 transition-colors"
                 >
-                  <span className="flex w-2.5 shrink-0 justify-center gap-1">
-                    {session.hasError ? (
-                      <span
-                        className="bg-red h-1.5 w-1.5 rounded-full"
-                        title="Captured errors"
-                      />
-                    ) : null}
-                    {session.reportedAt ? (
-                      <span
-                        className="bg-amber h-1.5 w-1.5 rounded-full"
-                        title="Reported by the visitor"
-                      />
-                    ) : null}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      session.hasError ? "bg-red" : "bg-amber"
+                    }`}
+                    title={
+                      session.hasError
+                        ? "Captured errors"
+                        : "Reported by the visitor"
+                    }
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[13px]">
                     {entryPath(session.entryUrl)}
                   </span>
                   <span className="text-muted shrink-0 truncate text-[13px]">
@@ -160,45 +254,58 @@ export default async function ProjectsPage() {
       </section>
 
       <section>
-        <h2 className="text-faint mb-2 text-[11px] font-medium tracking-wide uppercase">
+        <h2 className="text-muted mb-3 text-[15px] font-medium">
           All projects
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => {
-            const errored = erroredByProject.get(project.id) ?? 0;
-            const lastActive = lastActiveByProject.get(project.id) ?? null;
+            const stat = stats.get(project.id);
+            const errored = stat?.errored ?? 0;
+            const rate = stat?.rate ?? 0;
+            const healthy = errored === 0;
             return (
               <Link
                 key={project.id}
                 href={`/projects/${project.id}`}
-                className="block rounded-lg border border-edge bg-surface p-4 transition-colors hover:bg-raised"
+                className="hover:bg-raised/40 flex flex-col rounded-lg border border-edge bg-surface p-5 transition-colors"
               >
-                <div className="mb-3 flex items-start gap-2">
+                <div className="flex items-center gap-2">
                   <span
-                    className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                      errored > 0 ? "bg-red" : "bg-green"
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      healthy ? "bg-green" : "bg-red"
                     }`}
-                    title={errored > 0 ? `${errored} errored` : "healthy"}
+                    title={healthy ? "healthy" : `${errored} errored`}
                   />
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{project.name}</p>
-                    <p className="text-faint truncate font-mono text-xs">
-                      {project.key}
-                    </p>
+                  <span className="truncate text-[15px] font-medium">
+                    {project.name}
+                  </span>
+                </div>
+                <p className="text-faint ml-3.5 truncate font-mono text-xs">
+                  {project.key}
+                </p>
+
+                <div className="mt-5 flex items-end gap-6">
+                  <Metric
+                    value={project._count.sessions.toLocaleString("en")}
+                    label="Sessions"
+                  />
+                  <Metric
+                    value={errored.toString()}
+                    label="Errors"
+                    tone={healthy ? "text-green" : "text-red"}
+                  />
+                  <Metric value={`${rate}%`} label="Error rate" />
+                  <div className="ml-auto self-center">
+                    <Sparkline data={stat?.spark ?? []} healthy={healthy} />
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-[13px]">
-                  <span className="text-muted tabular-nums">
-                    {project._count.sessions}{" "}
-                    {project._count.sessions === 1 ? "session" : "sessions"}
-                  </span>
-                  {errored > 0 ? (
-                    <span className="text-red tabular-nums">
-                      {errored} errored
-                    </span>
-                  ) : null}
-                  <span className="text-faint ml-auto">
-                    {lastActive ? formatRelative(lastActive) : "no activity"}
+
+                <div className="mt-4 flex items-center justify-between border-t border-edge pt-3 text-[12px]">
+                  <span className="text-muted">Last activity</span>
+                  <span className="text-faint tabular-nums">
+                    {stat?.lastActive
+                      ? formatRelative(stat.lastActive)
+                      : "No activity"}
                   </span>
                 </div>
               </Link>

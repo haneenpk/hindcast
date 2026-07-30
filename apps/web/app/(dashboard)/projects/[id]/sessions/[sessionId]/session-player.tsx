@@ -38,6 +38,12 @@ export interface TimelineMarker {
 
 const NEXT_SPEED: Record<Speed, Speed> = { 1: 2, 2: 4, 4: 1 };
 
+// Fullscreen is where you go to see the replay large; inline it stays a
+// compact preview at a fixed size, so every session's player looks the
+// same regardless of the recorded viewport. Footage fits inside and centres.
+const INLINE_WIDTH = 720;
+const INLINE_MAX_HEIGHT = 460;
+
 export function SessionPlayer({
   sessionId,
   markers = [],
@@ -50,6 +56,7 @@ export function SessionPlayer({
   networkEntries?: NetworkEntry[];
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
@@ -81,6 +88,7 @@ export function SessionPlayer({
 
     const isFs = document.fullscreenElement === shellRef.current;
     let scale: number;
+    let offsetX = 0;
     if (isFs) {
       const controlsH = controlsRef.current?.offsetHeight ?? 44;
       scale = Math.min(
@@ -88,13 +96,22 @@ export function SessionPlayer({
         (window.innerHeight - controlsH) / recH,
       );
       stage.style.width = `${Math.round(recW * scale)}px`;
+      if (boxRef.current) boxRef.current.style.maxWidth = "";
     } else {
+      // A fixed inline frame (shrinking only on narrow screens); the footage
+      // fits inside it and is centred, so the player is the same size on
+      // every session no matter the recorded viewport.
       const availW = wrapperRef.current?.clientWidth ?? 848;
-      scale = Math.min(availW / recW, 1);
+      const frameW = Math.min(INLINE_WIDTH, availW);
+      scale = Math.min(frameW / recW, INLINE_MAX_HEIGHT / recH, 1);
       stage.style.width = "";
+      if (boxRef.current) boxRef.current.style.maxWidth = `${Math.round(frameW)}px`;
+      offsetX = Math.max(0, (frameW - recW * scale) / 2);
     }
     stage.style.height = `${Math.round(recH * scale)}px`;
-    wrapper.style.transform = `scale(${scale})`;
+    wrapper.style.transform = offsetX
+      ? `translateX(${Math.round(offsetX)}px) scale(${scale})`
+      : `scale(${scale})`;
   };
 
   useEffect(() => {
@@ -277,7 +294,9 @@ export function SessionPlayer({
     if (state !== "ready") return;
     const onKey = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, select, textarea, [contenteditable], aside")) {
+      if (
+        target?.closest("input, select, textarea, [contenteditable], aside")
+      ) {
         return;
       }
       if (event.code === "Space") {
@@ -300,7 +319,11 @@ export function SessionPlayer({
 
   const onMarkerClick = (marker: ScrubberMarker): void => {
     seek(marker.offsetMs);
-    setLaneFocus({ id: marker.id, kind: marker.kind, nonce: performance.now() });
+    setLaneFocus({
+      id: marker.id,
+      kind: marker.kind,
+      nonce: performance.now(),
+    });
   };
 
   const scrubberMarkers =
@@ -337,115 +360,129 @@ export function SessionPlayer({
       ) : null}
 
       <div className={state === "ready" ? "" : "invisible h-0 overflow-hidden"}>
-        <div ref={shellRef} className="player-shell">
-          <div className="stage-wrap relative">
+        <div ref={boxRef} className="mx-auto">
+          <div ref={shellRef} className="player-shell">
+            <div className="stage-wrap relative">
+              <div
+                ref={stageRef}
+                onClick={toggle}
+                className="session-stage cursor-pointer overflow-hidden rounded-t-lg border border-b-0 border-edge bg-surface"
+              />
+              {skipping ? (
+                <span className="text-amber pointer-events-none absolute top-2.5 right-2.5 rounded bg-black/70 px-2 py-0.5 text-[11px] tracking-wide uppercase">
+                  skipping idle
+                </span>
+              ) : null}
+            </div>
+
             <div
-              ref={stageRef}
-              onClick={toggle}
-              className="session-stage cursor-pointer overflow-hidden rounded-t-lg border border-b-0 border-edge bg-surface"
-            />
-            {skipping ? (
-              <span className="text-amber pointer-events-none absolute top-2.5 right-2.5 rounded bg-black/70 px-2 py-0.5 text-[11px] tracking-wide uppercase">
-                skipping idle
+              ref={controlsRef}
+              className="player-controls flex items-center gap-2.5 rounded-b-lg border border-edge bg-surface px-3 py-1.5"
+            >
+              <button
+                type="button"
+                onClick={toggle}
+                aria-label={playing ? "Pause" : "Play"}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-raised"
+              >
+                {playing ? (
+                  <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+                    <rect
+                      x="3"
+                      y="2"
+                      width="3.5"
+                      height="12"
+                      fill="currentColor"
+                    />
+                    <rect
+                      x="9.5"
+                      y="2"
+                      width="3.5"
+                      height="12"
+                      fill="currentColor"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+                    <path d="M4 2v12l10-6z" fill="currentColor" />
+                  </svg>
+                )}
+              </button>
+
+              <span className="text-muted w-12 shrink-0 text-right font-mono text-xs tabular-nums">
+                {formatClock(Math.min(timeMs, totalMs))}
               </span>
-            ) : null}
-          </div>
 
-          <div
-            ref={controlsRef}
-            className="player-controls flex items-center gap-2.5 rounded-b-lg border border-edge bg-surface px-3 py-1.5"
-          >
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label={playing ? "Pause" : "Play"}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-raised"
-            >
-              {playing ? (
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
-                  <rect x="3" y="2" width="3.5" height="12" fill="currentColor" />
-                  <rect x="9.5" y="2" width="3.5" height="12" fill="currentColor" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
-                  <path d="M4 2v12l10-6z" fill="currentColor" />
-                </svg>
-              )}
-            </button>
+              <Scrubber
+                timeMs={timeMs}
+                totalMs={totalMs}
+                markers={scrubberMarkers}
+                onScrub={(ms) => setTimeMs(ms)}
+                onCommit={seek}
+                onMarkerClick={onMarkerClick}
+                onDragChange={(dragging) => {
+                  scrubbingRef.current = dragging;
+                }}
+              />
 
-            <span className="text-muted w-12 shrink-0 text-right font-mono text-xs tabular-nums">
-              {formatClock(Math.min(timeMs, totalMs))}
-            </span>
+              <span className="text-faint w-12 shrink-0 font-mono text-xs tabular-nums">
+                {formatClock(totalMs)}
+              </span>
 
-            <Scrubber
-              timeMs={timeMs}
-              totalMs={totalMs}
-              markers={scrubberMarkers}
-              onScrub={(ms) => setTimeMs(ms)}
-              onCommit={seek}
-              onMarkerClick={onMarkerClick}
-              onDragChange={(dragging) => {
-                scrubbingRef.current = dragging;
-              }}
-            />
+              <div className="bg-edge h-4 w-px shrink-0" aria-hidden />
 
-            <span className="text-faint w-12 shrink-0 font-mono text-xs tabular-nums">
-              {formatClock(totalMs)}
-            </span>
+              <button
+                type="button"
+                onClick={cycleSpeed}
+                aria-label={`Playback speed ${speed}x`}
+                title="Playback speed"
+                className="text-muted w-8 shrink-0 rounded-md py-1 text-center font-mono text-xs transition-colors hover:bg-raised hover:text-fg"
+              >
+                {speed}×
+              </button>
 
-            <div className="bg-edge h-4 w-px shrink-0" aria-hidden />
+              <button
+                type="button"
+                onClick={toggleSkipInactive}
+                aria-pressed={skipInactive}
+                title="Fast-forward through idle stretches"
+                className={`shrink-0 rounded-md border px-2 py-1 text-[11px] tracking-wide uppercase transition-colors ${
+                  skipInactive
+                    ? "border-amber/50 text-amber"
+                    : "border-edge text-muted hover:text-fg"
+                }`}
+              >
+                skip idle
+              </button>
 
-            <button
-              type="button"
-              onClick={cycleSpeed}
-              aria-label={`Playback speed ${speed}x`}
-              title="Playback speed"
-              className="text-muted w-8 shrink-0 rounded-md py-1 text-center font-mono text-xs transition-colors hover:bg-raised hover:text-fg"
-            >
-              {speed}×
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleSkipInactive}
-              aria-pressed={skipInactive}
-              title="Fast-forward through idle stretches"
-              className={`shrink-0 rounded-md border px-2 py-1 text-[11px] tracking-wide uppercase transition-colors ${
-                skipInactive
-                  ? "border-amber/50 text-amber"
-                  : "border-edge text-muted hover:text-fg"
-              }`}
-            >
-              skip idle
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
-              title="Fullscreen (F)"
-              className="text-muted flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-raised hover:text-fg"
-            >
-              {fullscreen ? (
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
-                  <path
-                    d="M6 2v4H2M10 2v4h4M6 14v-4H2M10 14v-4h4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                  />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
-                  <path
-                    d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                  />
-                </svg>
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+                title="Fullscreen (F)"
+                className="text-muted flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-raised hover:text-fg"
+              >
+                {fullscreen ? (
+                  <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+                    <path
+                      d="M6 2v4H2M10 2v4h4M6 14v-4H2M10 14v-4h4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+                    <path
+                      d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                    />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
