@@ -100,6 +100,28 @@ pnpm seed
 The ingest integration tests boot the built server against the compose
 stack, so have `docker compose up -d` running before `pnpm test`.
 
+## Self-hosting
+
+Hindcast is four moving parts and three backing services, all in the
+`docker-compose.yml`:
+
+- **`apps/ingest`** — the public endpoint the recorder posts to. Expose
+  this one to the internet. It authenticates every batch by project key,
+  rate-limits per key, and writes gzipped chunks to object storage.
+- **`apps/web`** — the dashboard and landing page. Behind your own
+  network or auth; the app itself is gated by a single `ADMIN_SECRET`.
+- **Postgres** — session, error, network and chunk metadata.
+- **Object storage** (MinIO or any S3-compatible bucket) — the gzipped
+  event chunks themselves; nothing sensitive, but where the bulk lives.
+- **Redis** — backs the BullMQ retention jobs that delete expired
+  sessions.
+
+Each app reads its configuration from environment variables — see the
+`.env.example` next to each one. Point the recorder's `data-endpoint` at
+your ingest host, set a real `ADMIN_SECRET`, give each service its
+`DATABASE_URL` and `S3_*` credentials, and it runs. A one-command
+compose deployment and a hosted demo are on the way.
+
 ## Status
 
 The pipeline is closed and the dashboard is open: the recorder batches
@@ -142,4 +164,6 @@ host page. `pnpm seed` fills a fresh install with 45 replayable sample
 sessions across three projects, built from real recorded journeys, so
 the dashboard opens to a product rather than empty states. The player
 goes fullscreen (button or the `f` key) and refits the replay to any
-viewport. Next: the landing page and self-host docs.
+viewport. A public landing page fronts the dashboard, and the self-host
+guide above lays out the pieces. Next: one-command self-host and a
+deploy.
