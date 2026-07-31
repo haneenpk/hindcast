@@ -10,7 +10,7 @@ function LockIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-4 w-4"
+      className="h-3.5 w-3.5"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.6"
@@ -28,7 +28,7 @@ function EyeIcon({ off }: { off: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-4 w-4"
+      className="h-3.5 w-3.5"
       fill="none"
       stroke="currentColor"
       strokeWidth="1.6"
@@ -58,27 +58,27 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center px-6">
-      <div className="w-full max-w-[480px]">
-        <div className="mb-6 flex items-center justify-center gap-2.5">
-          <HindcastMark className="text-amber h-8 w-8" />
-          <span className="text-[28px] font-semibold tracking-tight">
+      <div className="w-full max-w-100">
+        <div className="mb-5 flex items-center justify-center gap-2">
+          <HindcastMark className="text-amber h-6 w-6" />
+          <span className="text-[22px] font-semibold tracking-tight">
             hindcast
           </span>
         </div>
 
-        <h1 className="text-center text-[22px] font-semibold tracking-tight">
+        <h1 className="text-center text-[18px] font-semibold tracking-tight">
           Unlock your Hindcast instance.
         </h1>
-        <p className="text-muted mt-2 text-center text-[15px]">
+        <p className="text-muted mt-1.5 text-center text-[13px]">
           Enter your instance secret to continue.
         </p>
 
-        <form action={formAction} className="mt-8">
-          <label htmlFor="secret" className="text-muted mb-2 block text-[13px]">
+        <form action={formAction} className="mt-7">
+          <label htmlFor="secret" className="text-muted mb-1.5 block text-[12px]">
             Instance secret
           </label>
           <div className="relative">
-            <span className="text-muted pointer-events-none absolute inset-y-0 left-3 flex items-center">
+            <span className="text-muted pointer-events-none absolute inset-y-0 left-2.5 flex items-center">
               <LockIcon />
             </span>
             <input
@@ -88,13 +88,13 @@ export default function LoginPage() {
               autoFocus
               autoComplete="current-password"
               placeholder="••••••••••••"
-              className="focus:border-amber w-full rounded-md border border-edge bg-surface py-2.5 pr-11 pl-10 font-mono text-[13px] outline-none placeholder:text-faint"
+              className="focus:border-amber w-full rounded-md border border-edge bg-surface py-2 pr-10 pl-9 font-mono text-[13px] outline-none placeholder:text-faint"
             />
             <button
               type="button"
               onClick={() => setShow((value) => !value)}
               aria-label={show ? "Hide secret" : "Show secret"}
-              className="text-muted hover:text-fg absolute inset-y-0 right-1.5 flex items-center rounded px-1.5 transition-colors"
+              className="text-muted hover:text-fg absolute inset-y-0 right-1 flex items-center rounded px-1.5 transition-colors"
             >
               <EyeIcon off={show} />
             </button>
@@ -103,17 +103,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="mt-3 w-full rounded-md bg-white py-3 text-[14px] font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="mt-2.5 w-full rounded-md bg-white py-2 text-[13px] font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {pending ? "Checking…" : "Unlock"}
           </button>
 
           {state.error ? (
-            <p className="text-red mt-3 text-center text-[13px]">{state.error}</p>
+            <p className="text-red mt-2.5 text-center text-[12px]">{state.error}</p>
           ) : (
-            <p className="text-faint mt-5 text-center text-[13px]">
+            <p className="text-faint mt-4 text-center text-[12px]">
               Press{" "}
-              <kbd className="border-edge text-muted rounded border px-1.5 py-0.5 font-mono text-[11px]">
+              <kbd className="border-edge text-muted rounded border px-1.5 py-0.5 font-mono text-[10px]">
                 Enter
               </kbd>{" "}
               to unlock

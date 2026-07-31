@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CopyButton } from "@/components/copy-button";
 import { HindcastMark } from "@/components/hindcast-mark";
+import { landingEnabled } from "@/lib/landing";
 
 export const metadata: Metadata = {
   title: "Hindcast — self-hosted session replay",
@@ -59,6 +60,9 @@ const STEPS = [
 ];
 
 export default function LandingPage() {
+  // Off by default: a self-hosted `/` goes straight to the app, not marketing.
+  if (!landingEnabled()) redirect("/projects");
+
   return (
     <div className="min-h-dvh">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
@@ -72,12 +76,6 @@ export default function LandingPage() {
           <a href={GITHUB} className="text-muted transition-colors hover:text-fg">
             GitHub
           </a>
-          <Link
-            href="/projects"
-            className="rounded-md border border-edge px-3 py-1.5 text-muted transition-colors hover:text-fg"
-          >
-            Open dashboard
-          </Link>
         </nav>
       </header>
 
