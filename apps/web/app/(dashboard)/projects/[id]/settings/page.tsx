@@ -46,6 +46,7 @@ export default async function ProjectSettingsPage({ params }: Props) {
   src="${endpoint}/r.js"
   data-key="${project.key}"
   data-endpoint="${endpoint}"></script>`;
+  const installCommand = "npm i @hindcast/sdk";
   const npmSnippet = `import { init } from "@hindcast/sdk";
 
 init({
@@ -76,6 +77,14 @@ init({
           <span className="font-mono text-xs">@hindcast/sdk</span> and call{" "}
           <span className="font-mono text-xs">init()</span> instead.
         </p>
+        <div className="relative mb-2 rounded-lg border border-edge bg-surface">
+          <pre className="overflow-x-auto p-4 font-mono text-xs leading-relaxed">
+            {installCommand}
+          </pre>
+          <div className="absolute top-2.5 right-2.5">
+            <CopyButton text={installCommand} />
+          </div>
+        </div>
         <div className="relative rounded-lg border border-edge bg-surface">
           <pre className="overflow-x-auto p-4 font-mono text-xs leading-relaxed">
             {npmSnippet}

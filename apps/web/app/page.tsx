@@ -16,6 +16,13 @@ const scriptSnippet = `<script async
   data-key="prj_live_9f2c…"
   data-endpoint="https://hindcast.example.com"></script>`;
 
+const initSnippet = `import { init } from "@hindcast/sdk";
+
+init({
+  key: "prj_live_9f2c…",
+  endpoint: "https://hindcast.example.com",
+});`;
+
 const runCommands = [
   "git clone https://github.com/haneenpk/hindcast && cd hindcast",
   "docker compose up -d",
@@ -185,20 +192,38 @@ export default function LandingPage() {
               <p className="text-faint mb-2 font-mono text-xs">03</p>
               <h3 className="mb-1.5 text-[15px] font-medium">Add the script</h3>
               <p className="text-muted text-[13px] leading-relaxed">
-                Point it at the ingest host from step 1. Drop one async{" "}
-                <span className="font-mono text-xs">r.js</span> in your{" "}
-                <span className="font-mono text-xs">&lt;head&gt;</span> — rrweb
-                bundled in, under a size budget, never blocks the page — or bundle
-                the npm package and call{" "}
-                <span className="font-mono text-xs">init()</span> if you build
-                with one. Recording starts immediately, masked in the browser.
+                Point it at the ingest host from step 1 and recording starts
+                immediately, masked in the browser. Two ways to load it — pick
+                one.
               </p>
-              <div className="relative mt-3 rounded-lg border border-edge bg-surface p-4">
+
+              <p className="text-muted mt-4 mb-2 text-[13px] font-medium">
+                A drop-in tag — no build step
+              </p>
+              <div className="relative rounded-lg border border-edge bg-surface p-4">
                 <div className="absolute top-3 right-3">
                   <CopyButton text={scriptSnippet} />
                 </div>
                 <pre className="scroll-thin overflow-x-auto font-mono text-xs leading-relaxed whitespace-pre">
                   {scriptSnippet}
+                </pre>
+              </div>
+
+              <p className="text-muted mt-5 mb-2 text-[13px] font-medium">
+                Or npm, if you build with a bundler
+              </p>
+              <div className="flex items-center gap-2 rounded-md border border-edge bg-surface py-1.5 pr-1.5 pl-3">
+                <code className="scroll-thin min-w-0 flex-1 overflow-x-auto font-mono text-xs whitespace-nowrap">
+                  npm i @hindcast/sdk
+                </code>
+                <CopyButton text="npm i @hindcast/sdk" />
+              </div>
+              <div className="relative mt-2 rounded-lg border border-edge bg-surface p-4">
+                <div className="absolute top-3 right-3">
+                  <CopyButton text={initSnippet} />
+                </div>
+                <pre className="scroll-thin overflow-x-auto font-mono text-xs leading-relaxed whitespace-pre">
+                  {initSnippet}
                 </pre>
               </div>
             </div>

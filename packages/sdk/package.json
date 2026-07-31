@@ -1,7 +1,26 @@
 {
   "name": "@hindcast/sdk",
   "version": "0.1.0",
-  "private": true,
+  "description": "Browser session-replay recorder for Hindcast — records DOM events (rrweb), masks in the browser, and ships to your own self-hosted ingest.",
+  "keywords": [
+    "session-replay",
+    "rrweb",
+    "recorder",
+    "self-hosted",
+    "debugging",
+    "hindcast"
+  ],
+  "license": "MIT",
+  "author": "Muhammed Haneen",
+  "homepage": "https://github.com/haneenpk/hindcast#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haneenpk/hindcast.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/haneenpk/hindcast/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -13,12 +32,19 @@
       "require": "./dist/index.cjs"
     }
   },
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup && node scripts/check-size.mjs",
     "size": "node scripts/check-size.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@rrweb/types": "^2.1.0",
