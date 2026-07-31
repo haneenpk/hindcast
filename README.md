@@ -108,8 +108,10 @@ Hindcast is four moving parts and three backing services, all in the
 - **`apps/ingest`** — the public endpoint the recorder posts to. Expose
   this one to the internet. It authenticates every batch by project key,
   rate-limits per key, and writes gzipped chunks to object storage.
-- **`apps/web`** — the dashboard and landing page. Behind your own
-  network or auth; the app itself is gated by a single `ADMIN_SECRET`.
+- **`apps/web`** — the dashboard. Behind your own network or auth; gated
+  by a single `ADMIN_SECRET`. The public marketing landing at `/` is off
+  by default — a self-hosted `/` goes straight to the app; set
+  `HINDCAST_LANDING=true` to serve it (e.g. a hosted demo).
 - **Postgres** — session, error, network and chunk metadata.
 - **Object storage** (MinIO or any S3-compatible bucket) — the gzipped
   event chunks themselves; nothing sensitive, but where the bulk lives.
