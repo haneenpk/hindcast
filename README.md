@@ -157,8 +157,9 @@ above cards for every site. The ingest endpoint is hardened for the open
 internet: oversized bodies get a 413, each project key is rate-limited
 per minute (fail-open, so a Redis blip never drops recordings), keys
 rotate from settings, and CORS is open to all origins but credential-free
-by design. The SDK ships two ways — an npm package and a single
-self-contained `r.js` embed (rrweb bundled in, ~60 KB gzipped, under a
+by design. The SDK ships two ways — the `@hindcast/sdk` npm package
+(`npm i @hindcast/sdk`) and a single self-contained `r.js` embed (rrweb
+bundled in, ~60 KB gzipped, under a
 budget CI enforces) — tracks SPA route changes, and never breaks the
 host page. `pnpm seed` fills a fresh install with 45 replayable sample
 sessions across three projects, built from real recorded journeys, so
