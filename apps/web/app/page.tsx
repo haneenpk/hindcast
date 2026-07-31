@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyButton } from "@/components/copy-button";
 import { HindcastMark } from "@/components/hindcast-mark";
@@ -77,12 +76,6 @@ export default function LandingPage() {
           <a href={GITHUB} className="text-muted transition-colors hover:text-fg">
             GitHub
           </a>
-          <Link
-            href="/projects"
-            className="rounded-md border border-edge px-3 py-1.5 text-muted transition-colors hover:text-fg"
-          >
-            Open dashboard
-          </Link>
         </nav>
       </header>
 
