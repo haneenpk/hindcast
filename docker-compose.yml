@@ -64,6 +64,82 @@ services:
         mc mb --ignore-existing local/hindcast-events
       "
 
+  # ---------------------------------------------------------------------------
+  # The full stack. These live behind the "full" profile, so a plain
+  # `docker compose up` still starts only the backing services (the dev
+  # workflow), while `docker compose --profile full up --build` runs
+  # everything — the whole app, one command.
+  # ---------------------------------------------------------------------------
+
+  # One-shot: apply pending migrations, then exit. Ingest and web wait for it.
+  migrate:
+    profiles: ["full"]
+    build: &app-build
+      context: .
+      dockerfile: Dockerfile
+    image: hindcast-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://hindcast:hindcast@postgres:5432/hindcast
+    command: pnpm --filter @hindcast/db migrate:deploy
+    restart: "no"
+
+  ingest:
+    profiles: ["full"]
+    build: *app-build
+    image: hindcast-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PORT: "4100"
+      DATABASE_URL: postgresql://hindcast:hindcast@postgres:5432/hindcast
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: hindcast
+      S3_SECRET_KEY: hindcast-dev
+      S3_BUCKET: hindcast-events
+    ports:
+      - "${INGEST_PORT:-4100}:4100"
+    command: node apps/ingest/dist/main.js
+    restart: unless-stopped
+
+  web:
+    profiles: ["full"]
+    build: *app-build
+    image: hindcast-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      # Change this — it's the one secret that opens the dashboard.
+      ADMIN_SECRET: "${ADMIN_SECRET:-change-me}"
+      DATABASE_URL: postgresql://hindcast:hindcast@postgres:5432/hindcast
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: hindcast
+      S3_SECRET_KEY: hindcast-dev
+      S3_BUCKET: hindcast-events
+      # The ingest host the install snippet points at (what browsers hit).
+      HINDCAST_INGEST_URL: "${HINDCAST_INGEST_URL:-http://localhost:4100}"
+      # Set to "true" to serve the marketing landing at / (off by default).
+      HINDCAST_LANDING: "${HINDCAST_LANDING:-}"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    command: pnpm --filter @hindcast/web start
+    restart: unless-stopped
+
 volumes:
   pg-data:
   redis-data:

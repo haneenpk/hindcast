@@ -41,7 +41,12 @@ export default async function ProjectSettingsPage({ params }: Props) {
   const retentionValue =
     project.retentionDays === null ? "" : String(project.retentionDays);
 
-  const endpoint = process.env.NEXT_PUBLIC_INGEST_URL ?? "http://localhost:4100";
+  // Runtime first so a single built image serves any host; NEXT_PUBLIC_ is
+  // kept for existing dev setups (it bakes in at build time).
+  const endpoint =
+    process.env.HINDCAST_INGEST_URL ??
+    process.env.NEXT_PUBLIC_INGEST_URL ??
+    "http://localhost:4100";
   const scriptSnippet = `<script async
   src="${endpoint}/r.js"
   data-key="${project.key}"

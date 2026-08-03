@@ -1,0 +1,16 @@
+# Host build artifacts and deps — rebuilt inside the image for this platform.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+
+# Local env and secrets never go into the image (compose passes them in).
+.env
+**/.env
+
+# VCS, editor, logs, misc.
+.git
+.gitignore
+**/*.log
+.DS_Store
