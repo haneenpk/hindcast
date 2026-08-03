@@ -14,6 +14,8 @@ stack trace; it's the thirty seconds of footage that led up to it.
 GlitchTip is self-hosted Sentry. Hindcast is self-hosted LogRocket.
 Sessions never leave your infrastructure.
 
+![The Hindcast dashboard — a cross-project feed of what broke or got reported, above per-project cards with error rates and sparklines.](docs/dashboard.png)
+
 ## How it works
 
 1. **Record.** One async `<script>` tag loads a single ~60 KB (gzipped)
@@ -35,6 +37,32 @@ Sessions never leave your infrastructure.
 4. **Replay.** The dashboard plays a session back with a synced timeline
    of console errors and failed network requests underneath. Click an
    error, land on the exact moment it fired.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph browser["Visitor's browser"]
+    sdk["r.js recorder<br/>rrweb · masks inputs"]
+  end
+  subgraph infra["Your infrastructure"]
+    ingest["apps/ingest<br/>ingest API"]
+    web["apps/web<br/>dashboard + replay"]
+    s3[("object storage<br/>gzipped chunks")]
+    pg[("Postgres<br/>metadata")]
+    redis[("Redis<br/>retention queue")]
+  end
+  sdk -- "batches every ~5s" --> ingest
+  ingest -- "gzipped events" --> s3
+  ingest -- "session metadata" --> pg
+  ingest -. "retention jobs" .-> redis
+  web -- "reads chunks" --> s3
+  web -- "queries" --> pg
+```
+
+The recorder only ever talks to **ingest**; the dashboard reads straight
+from storage and Postgres. Ingest is the one piece you expose to the
+internet — everything else stays on your own network.
 
 ## Layout
 
