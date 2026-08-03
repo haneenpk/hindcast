@@ -2,6 +2,8 @@
 
 ![ci](https://github.com/haneenpk/hindcast/actions/workflows/ci.yml/badge.svg?branch=dev)
 
+**[Live site →](https://hindcast-web.vercel.app)** · [`@hindcast/sdk` on npm](https://www.npmjs.com/package/@hindcast/sdk)
+
 Self-hosted session replay. Meteorologists reconstruct a storm by running
 their models backwards over recorded data — they call it a hindcast. This
 is that, for your frontend: Hindcast records what a real user did on your
