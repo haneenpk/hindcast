@@ -102,6 +102,21 @@ stack, so have `docker compose up -d` running before `pnpm test`.
 
 ## Self-hosting
 
+### One command
+
+The whole stack — ingest, dashboard, Postgres, Redis and object storage —
+comes up together behind a compose profile:
+
+```sh
+cp .env.example .env      # set ADMIN_SECRET (and your ingest URL)
+docker compose --profile full up --build
+```
+
+Dashboard on `:3000`, ingest on `:4100`; migrations run first, on their
+own. One image is built and run as both apps. (Plain `docker compose up`
+without the profile still starts only the backing services — the local-dev
+workflow above, against `pnpm dev`.)
+
 Hindcast is four moving parts and three backing services, all in the
 `docker-compose.yml`:
 
@@ -121,8 +136,8 @@ Hindcast is four moving parts and three backing services, all in the
 Each app reads its configuration from environment variables — see the
 `.env.example` next to each one. Point the recorder's `data-endpoint` at
 your ingest host, set a real `ADMIN_SECRET`, give each service its
-`DATABASE_URL` and `S3_*` credentials, and it runs. A one-command
-compose deployment and a hosted demo are on the way.
+`DATABASE_URL` and `S3_*` credentials, and it runs. A hosted demo is on
+the way.
 
 ## Status
 
