@@ -148,7 +148,7 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-9 grid gap-x-10 gap-y-9 lg:grid-cols-2">
-            <div>
+            <div className="min-w-0">
               <p className="text-faint mb-2 font-mono text-xs">01</p>
               <h3 className="mb-1.5 text-[15px] font-medium">Run it</h3>
               <p className="text-muted text-[13px] leading-relaxed">
@@ -174,7 +174,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-faint mb-2 font-mono text-xs">02</p>
               <h3 className="mb-1.5 text-[15px] font-medium">
                 Create a project
@@ -186,7 +186,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-faint mb-2 font-mono text-xs">03</p>
               <h3 className="mb-1.5 text-[15px] font-medium">Add the script</h3>
               <p className="text-muted text-[13px] leading-relaxed">
@@ -226,7 +226,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-faint mb-2 font-mono text-xs">04</p>
               <h3 className="mb-1.5 text-[15px] font-medium">Watch</h3>
               <p className="text-muted text-[13px] leading-relaxed">
