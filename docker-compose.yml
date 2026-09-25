@@ -35,8 +35,13 @@ services:
       timeout: 3s
       retries: 10
 
+  # MinIO no longer publishes images to Docker Hub, Quay or GHCR; Chainguard
+  # builds it from source and keeps `latest` public. It runs as a non-root
+  # user by default, which can't write a root-owned /data — including an
+  # existing volume the old image created — so run it as root here.
   minio:
-    image: minio/minio
+    image: cgr.dev/chainguard/minio:latest
+    user: "0:0"
     command: server /data --console-address ":9001"
     ports:
       - "${MINIO_PORT:-9000}:9000"
@@ -54,7 +59,8 @@ services:
 
   # One-shot: make sure the events bucket exists, then exit.
   minio-init:
-    image: minio/mc
+    # the -dev variant ships a shell, which the entrypoint below needs
+    image: cgr.dev/chainguard/minio-client:latest-dev
     depends_on:
       minio:
         condition: service_healthy

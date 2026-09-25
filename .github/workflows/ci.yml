@@ -47,13 +47,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Service containers can't set a command and minio/minio needs one,
-      # so minio starts as a plain container instead.
+      # Service containers can't set a command and minio needs one, so it
+      # starts as a plain container instead. MinIO stopped publishing images;
+      # Chainguard's build is the maintained public one. It defaults to a
+      # non-root user that can't write /data, hence --user 0.
       - name: start minio
         run: >-
-          docker run -d --name minio -p 9000:9000
+          docker run -d --name minio -p 9000:9000 --user 0
           -e MINIO_ROOT_USER=hindcast -e MINIO_ROOT_PASSWORD=hindcast-dev
-          minio/minio server /data
+          cgr.dev/chainguard/minio:latest server /data
 
       - uses: pnpm/action-setup@v4
 
@@ -64,10 +66,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # By now minio has had the whole install to finish booting.
+      # By now minio has had the whole install to finish booting. The
+      # client's -dev variant carries the shell this entrypoint needs.
       - name: create events bucket
         run: >-
-          docker run --rm --network host --entrypoint /bin/sh minio/mc -c
+          docker run --rm --network host --entrypoint /bin/sh
+          cgr.dev/chainguard/minio-client:latest-dev -c
           "mc alias set local http://localhost:9000 hindcast hindcast-dev
           && mc mb --ignore-existing local/hindcast-events"
 
