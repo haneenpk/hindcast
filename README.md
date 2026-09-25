@@ -14,7 +14,10 @@ stack trace; it's the thirty seconds of footage that led up to it.
 GlitchTip is self-hosted Sentry. Hindcast is self-hosted LogRocket.
 Sessions never leave your infrastructure.
 
-![The Hindcast dashboard — a cross-project feed of what broke or got reported, above per-project cards with error rates and sparklines.](docs/dashboard.png)
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/dashboard-light.png">
+  <img alt="The Hindcast dashboard — a cross-project feed of what broke or got reported, above per-project cards with error rates and sparklines." src="docs/dashboard.png">
+</picture>
 
 ## How it works
 
