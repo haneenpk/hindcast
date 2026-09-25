@@ -41,9 +41,9 @@ const FIXTURES = {
 
 // Weighted toward the light journeys, the way real traffic runs.
 const JOURNEYS = [
-  { fixture: FIXTURES.browse, weight: 5, paths: ["/", "/products/oak-bookshelf", "/sale"] },
-  { fixture: FIXTURES.cart, weight: 3, paths: ["/products/linen-lounge-chair", "/products/brass-task-lamp", "/cart"] },
-  { fixture: FIXTURES.checkout, weight: 2, paths: ["/products/walnut-writing-desk", "/checkout", "/products/marble-side-table"] },
+  { fixture: FIXTURES.browse, weight: 5, paths: ["/", "/products/oak-bookshelf", "/products/rattan-pendant-light"] },
+  { fixture: FIXTURES.cart, weight: 3, paths: ["/products/linen-lounge-chair", "/products/brass-table-lamp", "/cart"] },
+  { fixture: FIXTURES.checkout, weight: 2, paths: ["/", "/products/walnut-writing-desk", "/products/marble-nesting-tables"] },
 ];
 
 const DEVICES = [
