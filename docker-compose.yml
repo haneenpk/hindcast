@@ -141,6 +141,7 @@ services:
       HINDCAST_INGEST_URL: "${HINDCAST_INGEST_URL:-http://localhost:4100}"
       # Set to "true" to serve the marketing landing at / (off by default).
       HINDCAST_LANDING: "${HINDCAST_LANDING:-}"
+      HINDCAST_DASHBOARD_LINK: "${HINDCAST_DASHBOARD_LINK:-}"
     ports:
       - "${WEB_PORT:-3000}:3000"
     command: pnpm --filter @hindcast/web start

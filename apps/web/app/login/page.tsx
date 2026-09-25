@@ -103,7 +103,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="mt-2.5 w-full rounded-md bg-white py-2 text-[13px] font-medium text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="mt-2.5 w-full rounded-md bg-fg py-2 text-[13px] font-medium text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {pending ? "Checking…" : "Unlock"}
           </button>

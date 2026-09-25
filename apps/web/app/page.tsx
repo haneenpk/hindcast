@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyButton } from "@/components/copy-button";
 import { HindcastMark } from "@/components/hindcast-mark";
-import { landingEnabled } from "@/lib/landing";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { dashboardLinkEnabled, landingEnabled } from "@/lib/landing";
 
 export const metadata: Metadata = {
   title: "Hindcast — self-hosted session replay",
@@ -11,6 +13,9 @@ export const metadata: Metadata = {
 };
 
 const GITHUB = "https://github.com/haneenpk/hindcast";
+
+const HERO_ALT =
+  "The Hindcast dashboard: a cross-project feed of what broke or got reported, above per-project cards with sessions, error rate, and a sparkline of recent errors.";
 
 const scriptSnippet = `<script async
   src="https://hindcast.example.com/r.js"
@@ -73,9 +78,15 @@ export default function LandingPage() {
           </span>
         </span>
         <nav className="flex items-center gap-5 text-[13px]">
+          {dashboardLinkEnabled() ? (
+            <Link href="/projects" className="text-fg transition-opacity hover:opacity-70">
+              Dashboard →
+            </Link>
+          ) : null}
           <a href={GITHUB} className="text-muted transition-colors hover:text-fg">
             GitHub
           </a>
+          <ThemeToggle bare />
         </nav>
       </header>
 
@@ -98,7 +109,7 @@ export default function LandingPage() {
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <a
               href="#get-started"
-              className="rounded-md bg-white px-4 py-2 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
+              className="rounded-md bg-fg px-4 py-2 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
             >
               Get started
             </a>
@@ -113,12 +124,10 @@ export default function LandingPage() {
 
         <section className="pb-16">
           <div className="overflow-hidden rounded-lg border border-edge bg-surface">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/hero.png"
-              alt="The Hindcast dashboard: a cross-project feed of what broke or got reported, above per-project cards with sessions, error rate, and a sparkline of recent errors."
-              className="block w-full"
-            />
+            {/* A background, not two <img>s: browsers fetch a hidden <img>
+                anyway, but only download the background that applies —
+                so each visitor gets one screenshot, for their theme. */}
+            <div role="img" aria-label={HERO_ALT} className="hero-shot" />
           </div>
         </section>
 
