@@ -66,10 +66,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # By now minio has had the whole install to finish booting.
+      # By now minio has had the whole install to finish booting. The
+      # client's -dev variant carries the shell this entrypoint needs.
       - name: create events bucket
         run: >-
-          docker run --rm --network host --entrypoint /bin/sh minio/mc -c
+          docker run --rm --network host --entrypoint /bin/sh
+          cgr.dev/chainguard/minio-client:latest-dev -c
           "mc alias set local http://localhost:9000 hindcast hindcast-dev
           && mc mb --ignore-existing local/hindcast-events"
 
