@@ -92,11 +92,12 @@ export function SessionLanes({
       if (!row) return;
       row.scrollIntoView({ block: "nearest" });
       try {
+        // --pulse is theme-aware (a white wash on dark, an ink wash on light)
+        const pulse =
+          getComputedStyle(document.documentElement).getPropertyValue("--pulse").trim() ||
+          "rgba(255,255,255,0.07)";
         row.animate(
-          [
-            { backgroundColor: "rgba(255,255,255,0.07)" },
-            { backgroundColor: "rgba(255,255,255,0)" },
-          ],
+          [{ backgroundColor: pulse }, { backgroundColor: "transparent" }],
           { duration: 900, easing: "ease-out" },
         );
       } catch {
@@ -243,7 +244,7 @@ function Drawer({
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/50"
+        className="fixed inset-0 z-40 bg-(--scrim)"
         onClick={onClose}
         aria-hidden
       />
@@ -335,7 +336,7 @@ function Drawer({
           <button
             type="button"
             onClick={() => onJump(offsetMs)}
-            className="w-full rounded-md bg-white px-3 py-2 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
+            className="w-full rounded-md bg-fg px-3 py-2 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
           >
             Jump to this moment
           </button>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logout } from "@/app/login/actions";
 import { HindcastMark } from "@/components/hindcast-mark";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { NavLink } from "./nav-link";
 
 function ProjectsIcon() {
@@ -39,7 +40,11 @@ export function Sidebar() {
         </NavLink>
       </nav>
 
-      <form action={logout} className="mt-auto px-3 pb-4">
+      <div className="mt-auto px-3">
+        <ThemeToggle />
+      </div>
+
+      <form action={logout} className="px-3 pb-4">
         <button
           type="submit"
           className="text-muted hover:bg-raised/60 hover:text-fg flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] transition-colors"

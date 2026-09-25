@@ -113,7 +113,7 @@ function CreateForm() {
       />
       <button
         type="submit"
-        className="rounded-md bg-white px-4 py-2.5 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
+        className="rounded-md bg-fg px-4 py-2.5 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
       >
         Create project
       </button>
@@ -243,7 +243,7 @@ export default async function ProjectsPage() {
                   <span className="text-muted shrink-0 truncate text-[13px]">
                     {session.project.name}
                   </span>
-                  <span className="text-faint w-16 shrink-0 text-right text-[13px] tabular-nums">
+                  <span className="text-faint w-24 shrink-0 text-right text-[13px] whitespace-nowrap tabular-nums">
                     {formatRelative(session.startedAt)}
                   </span>
                 </Link>

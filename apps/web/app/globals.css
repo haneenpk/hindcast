@@ -29,6 +29,49 @@
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 }
 
+/*
+ * Light theme: the same system inverted — white canvas, near-black ink,
+ * zinc hairlines, still no shadows. The three accents keep their hue but
+ * sit deeper, because on white the dark-theme amber reads at ~1.7:1.
+ * The replay footage is the recorded site and is never themed.
+ */
+:root {
+  color-scheme: dark;
+  /* the flash on a lane row when a scrubber marker jumps to it */
+  --pulse: rgba(255, 255, 255, 0.07);
+  /* the dim behind the detail drawer */
+  --scrim: rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --pulse: rgba(17, 17, 19, 0.06);
+  --scrim: rgba(17, 17, 19, 0.18);
+
+  --color-bg: #ffffff;
+  --color-surface: #fafafa;
+  --color-raised: #f1f1f3;
+  --color-edge: #e5e5e8;
+  --color-edge-strong: #d4d4d9;
+
+  --color-fg: #111113;
+  --color-muted: #62626a;
+  --color-faint: #9f9fa7;
+
+  --color-red: #d93d42;
+  --color-green: #1f8a57;
+  --color-amber: #c98200;
+}
+
+/* The landing's dashboard screenshot, one per theme (2880×1800). */
+.hero-shot {
+  aspect-ratio: 16 / 10;
+  background: url("/hero.png") top left / cover no-repeat;
+}
+:root[data-theme="light"] .hero-shot {
+  background-image: url("/hero-light.png");
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-fg);

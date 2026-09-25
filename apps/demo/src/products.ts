@@ -1,11 +1,23 @@
+import bookshelf from "./assets/photos/oak-bookshelf.webp";
+import chair from "./assets/photos/linen-lounge-chair.webp";
+import desk from "./assets/photos/walnut-writing-desk.webp";
+import lamp from "./assets/photos/brass-table-lamp.webp";
+import pendant from "./assets/photos/rattan-pendant-light.webp";
+import tables from "./assets/photos/marble-nesting-tables.webp";
+import throwBlanket from "./assets/photos/wool-throw-blanket.webp";
+import vase from "./assets/photos/ceramic-table-vase.webp";
+
 export interface Product {
   slug: string;
   name: string;
   price: number;
   category: string;
+  image: string;
+  /** Background shown behind the photo while it decodes. */
   tone: string;
   blurb: string;
   details: string;
+  specs: [label: string, value: string][];
 }
 
 export const products: Product[] = [
@@ -13,88 +25,138 @@ export const products: Product[] = [
     slug: "walnut-writing-desk",
     name: "Walnut Writing Desk",
     price: 499,
-    category: "Desks",
-    tone: "#8a5a3b",
-    blurb: "Solid black walnut with two soft-close drawers.",
+    category: "Workspace",
+    image: desk,
+    tone: "#e9e7e3",
+    blurb: "A slim desk in solid black walnut.",
     details:
-      "140 × 70 cm, 76 cm tall. Solid black walnut top with a cable grommet, dovetailed drawers, hard-wax oil finish. Ships flat; assembles with eight bolts.",
+      "Sized for a hallway or a bedroom corner — room for a laptop, a lamp and not much else, on purpose. Solid black walnut on tapered legs, finished in hard-wax oil.",
+    specs: [
+      ["Dimensions", "110 × 45 × 76 cm"],
+      ["Material", "Solid black walnut"],
+      ["Finish", "Hard-wax oil"],
+    ],
   },
   {
-    slug: "brass-task-lamp",
-    name: "Brass Task Lamp",
-    price: 89,
+    slug: "brass-table-lamp",
+    name: "Brass Table Lamp",
+    price: 149,
     category: "Lighting",
-    tone: "#a98146",
-    blurb: "Machined brass, double-jointed arm, warm 2700K bulb included.",
+    image: lamp,
+    tone: "#d9d3cb",
+    blurb: "Fluted opal glass on a brushed-brass stem.",
     details:
-      "Solid machined brass with a weighted steel base. Double-jointed arm holds any angle. Inline dimmer, E14 socket, 2700K filament bulb in the box.",
+      "The fluted opal-glass shade softens the bulb into an even, low glow. Brushed-brass stem on a weighted base, inline dimmer, 2700K bulb in the box.",
+    specs: [
+      ["Height", "42 cm"],
+      ["Material", "Brass, opal glass"],
+      ["Bulb", "E14, 2700K, included"],
+    ],
   },
   {
     slug: "linen-lounge-chair",
     name: "Linen Lounge Chair",
     price: 645,
     category: "Seating",
-    tone: "#9b9273",
-    blurb: "Kiln-dried beech frame in stonewashed flax linen.",
+    image: chair,
+    tone: "#ebe7e0",
+    blurb: "Solid oak frame, stonewashed linen cushions.",
     details:
-      "Kiln-dried beech frame, sinuous-spring seat, high-resilience foam wrapped in feather. Stonewashed Belgian flax; the cover zips off for cleaning.",
+      "Low, deep and made for reading. A solid oak frame holds loose seat and back cushions in stonewashed flax linen; the covers zip off for washing.",
+    specs: [
+      ["Dimensions", "68 × 78 × 80 cm"],
+      ["Frame", "Solid white oak"],
+      ["Cover", "Stonewashed flax linen"],
+    ],
   },
   {
     slug: "oak-bookshelf",
     name: "Oak Bookshelf",
     price: 329,
     category: "Storage",
-    tone: "#b08d5f",
-    blurb: "Five fixed shelves in quartersawn white oak.",
+    image: bookshelf,
+    tone: "#e6e3de",
+    blurb: "Open shelving in solid white oak.",
     details:
-      "180 × 80 × 30 cm. Quartersawn white oak, five fixed shelves rated to 25 kg each, anti-tip wall strap included. No visible fasteners.",
+      "Open on every side, so it can stand against a wall or divide a room. Seven fixed shelves rated to 20 kg each, with an anti-tip strap and no visible fasteners.",
+    specs: [
+      ["Dimensions", "200 × 60 × 30 cm"],
+      ["Material", "Solid white oak"],
+      ["Load", "20 kg per shelf"],
+    ],
   },
   {
     slug: "ceramic-table-vase",
     name: "Ceramic Table Vase",
-    price: 38,
+    price: 58,
     category: "Decor",
-    tone: "#7d8a8c",
-    blurb: "Wheel-thrown stoneware in a matte glacier glaze.",
+    image: vase,
+    tone: "#ece8e1",
+    blurb: "Wheel-thrown stoneware, matte chalk glaze.",
     details:
-      "Wheel-thrown stoneware, 22 cm tall, matte glacier glaze with a raw clay foot. Each one comes out of the kiln slightly different — that's the point.",
+      "Thrown by hand, then glazed in a dry, matte chalk white with a raw clay foot. Each one comes out of the kiln a little different — that's the point.",
+    specs: [
+      ["Height", "32 cm"],
+      ["Material", "Stoneware"],
+      ["Glaze", "Matte chalk"],
+    ],
   },
   {
     slug: "wool-throw-blanket",
     name: "Wool Throw Blanket",
-    price: 75,
+    price: 95,
     category: "Textiles",
-    tone: "#8d6b6b",
-    blurb: "Undyed merino, brushed both sides, 130 × 180 cm.",
+    image: throwBlanket,
+    tone: "#c9ccd2",
+    blurb: "Undyed merino in slate, with a loose fringe.",
     details:
-      "100% undyed merino lambswool, brushed on both sides, twisted fringe. 130 × 180 cm, 640 g. Dry clean or a careful hand wash.",
+      "Woven from undyed merino lambswool in a soft slate, brushed on both sides and finished with a loose, knotted fringe. Warm without weight.",
+    specs: [
+      ["Size", "130 × 180 cm"],
+      ["Material", "100% merino wool"],
+      ["Care", "Cool hand wash"],
+    ],
   },
   {
     slug: "rattan-pendant-light",
     name: "Rattan Pendant Light",
     price: 129,
     category: "Lighting",
-    tone: "#b59a68",
-    blurb: "Hand-woven rattan shade, 45 cm, fabric-wrapped cord.",
+    image: pendant,
+    tone: "#f0ede8",
+    blurb: "A hand-woven rattan cylinder, 38 cm.",
     details:
-      "Hand-woven natural rattan on a steel ring, 45 cm across. Two-metre fabric-wrapped cord with a ceiling rose. Throws a patterned, unhurried light.",
+      "Natural rattan woven by hand over a light steel frame. Throws a warm, patterned light across the ceiling; two metres of fabric cord with a ceiling rose.",
+    specs: [
+      ["Diameter", "38 cm"],
+      ["Material", "Natural rattan"],
+      ["Cord", "2 m, fabric-wrapped"],
+    ],
   },
   {
-    slug: "marble-side-table",
-    name: "Marble Side Table",
-    price: 259,
+    slug: "marble-nesting-tables",
+    name: "Marble Nesting Tables",
+    price: 389,
     category: "Tables",
-    tone: "#8f8f95",
-    blurb: "Honed Carrara top on a blackened steel base.",
+    image: tables,
+    tone: "#e7e7e7",
+    blurb: "Honed Carrara on brushed-brass hoops, a pair.",
     details:
-      "45 cm round honed Carrara marble on a powder-coated steel tripod. 52 cm tall. Every top is cut from a different slab, so the veining is yours alone.",
+      "Two honed Carrara tops on brushed-brass hoop bases. Nest them together in front of the sofa, or split them between the sofa and a chair.",
+    specs: [
+      ["Diameters", "60 and 45 cm"],
+      ["Top", "Honed Carrara marble"],
+      ["Base", "Brushed brass"],
+    ],
   },
 ];
+
+export const categories = ["All", ...new Set(products.map((p) => p.category))];
 
 export function findProduct(slug: string): Product | undefined {
   return products.find((product) => product.slug === slug);
 }
 
 export function formatPrice(price: number): string {
-  return `$${price}`;
+  return `$${price.toLocaleString("en-US")}`;
 }
